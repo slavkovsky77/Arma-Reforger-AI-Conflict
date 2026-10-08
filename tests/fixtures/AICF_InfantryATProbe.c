@@ -130,9 +130,11 @@ modded class AICF_MatchController
 			array<string> stockSuffixes = {};
 			string stockRole;
 			stock.BuildCharacterRoleCandidates(stable, 9, stockRole, stockSuffixes);
-			AICF_ATCheck("STOCK_UNCHANGED_" + groupIndex, stockRole == "RIFLEMAN");
+			string expectedLastRole = "RIFLEMAN";
+			if (reinforced) expectedLastRole = "ANTI_TANK";
+			AICF_ATCheck("STOCK_DIFFICULTY_" + groupIndex, stockRole == expectedLastRole);
 			baseline.BuildCharacterRoleCandidates(stable, 9, stockRole, stockSuffixes);
-			AICF_ATCheck("RHS_UNCHANGED_" + groupIndex, stockRole == "RIFLEMAN");
+			AICF_ATCheck("RHS_DIFFICULTY_" + groupIndex, stockRole == expectedLastRole);
 		}
 		array<string> invalidSuffixes = {};
 		string invalidRole;
