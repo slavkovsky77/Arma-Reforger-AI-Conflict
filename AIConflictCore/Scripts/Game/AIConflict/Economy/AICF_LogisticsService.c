@@ -49,7 +49,10 @@ class AICF_LogisticsService
 		m_Planner = new AICF_LogisticsPlanner(graph, config, economy, m_Book);
 		m_Manual = new AICF_ManualSupplyDispatch(m_Planner, m_Registry, vehicles);
 		economy.LogisticsWorkers(m_Registry.m_aWorkers);
-		AICF_Stage4Diagnostics.Info("LOGISTICS_DISPATCH_POLICY", "mode=MANUAL automatic_dispatch=0 existing_jobs=CONTINUE cargo_recovery=RETURN_ONLY");
+		if (AutomaticDispatch())
+			AICF_Stage4Diagnostics.Info("LOGISTICS_DISPATCH_POLICY", "mode=AUTOMATIC_AND_MANUAL automatic_dispatch=1 existing_jobs=CONTINUE cargo_recovery=RETURN");
+		else
+			AICF_Stage4Diagnostics.Info("LOGISTICS_DISPATCH_POLICY", "mode=MANUAL automatic_dispatch=0 existing_jobs=CONTINUE cargo_recovery=RETURN_ONLY");
 	}
 
 	bool RequestTransport(SCR_PlayerController player, int request, RplId source, RplId destination, int amount, out string reason)
@@ -87,7 +90,13 @@ class AICF_LogisticsService
 		{
 			m_iMaintenanceCursor = m_iMaintenanceCursor % m_Registry.m_aWorkers.Count();
 			AICF_LogisticsWorker candidate = m_Registry.m_aWorkers[m_iMaintenanceCursor++];
-			MaintainWorker(candidate, now);
+			// ZCR: the AI commanders run their own supply trucks again (upstream made dispatch manual -
+			// only a player's map order moved supplies, so AI-only matches never hauled anything; Martin
+			// 19 Oct: "no supplies being transported by trucks"). A player's manual order keeps the truck.
+			if (AutomaticDispatch() && !m_Manual.OwnsWorker(candidate))
+				AutoSelectWork(candidate, now);
+			else
+				MaintainWorker(candidate, now);
 		}
 		if (now >= m_iNextHeartbeatMs)
 		{
@@ -95,6 +104,88 @@ class AICF_LogisticsService
 			foreach (AICF_LogisticsWorker report : m_Registry.m_aWorkers) AICF_LogisticsLedger.LogBalance(report);
 		}
 		m_MapMarkers.Sync(m_Registry.m_aWorkers, now);
+	}
+
+	// ZCR: automatic dispatch on unless -aicfLogisticsManualOnly.
+	static bool AutomaticDispatch()
+	{
+		return !System.IsCLIParam("aicfLogisticsManualOnly");
+	}
+
+	// The automatic scheduler as it was before manual dispatch (upstream 2a00451^): spawn a truck for a
+	// depot with work, load where supplies are spare, deliver where they are short, return home.
+	protected void AutoSelectWork(AICF_LogisticsWorker w, int now)
+	{
+		if (w.m_bCargoFault || w.m_DriverInteraction || now < w.m_iRetryAtMs || w.m_Job) return;
+		if (w.m_bCleanupComplete)
+		{
+			if (now - w.m_iRetryAtMs < m_Config.m_iReplacementCooldownMs) return;
+			w.m_bCleanupQueued = false;
+		}
+		if (w.m_bCleanupQueued) return;
+		bool homeLive = w.m_bEligible && AICF_LogisticsDepotRegistry.Live(w);
+		if (!w.m_Lease)
+		{
+			if (!homeLive || w.m_Group || w.m_Vehicle) return;
+			if (w.m_ExitHistory && w.m_ExitHistory.AllCooling(w, now))
+			{
+				DeferWorker(w, now, "ALL_EXACT_DEPOT_EXITS_COOLING");
+				return;
+			}
+			if (m_Planner.Select(w, true))
+			{
+				if (!m_Vehicles.BeginLogisticsSpawn(w)) DeferWorker(w, now, "SHARED_FLEET_OR_AI_ADMISSION");
+			}
+			else if (!w.m_Search) DeferWorker(w, now, w.m_sPlanningReason);
+			return;
+		}
+		if (!w.Ready()) return;
+		if (w.m_ePhase != AICF_ELogisticsPhase.DRIVER_READY && w.m_ePhase != AICF_ELogisticsPhase.IDLE_AT_DEPOT &&
+			w.m_ePhase != AICF_ELogisticsPhase.RETURN_HOME && w.m_ePhase != AICF_ELogisticsPhase.WAIT_RETRY) return;
+		if (w.m_fObservedCargo > 0)
+		{
+			bool selected;
+			if (!w.m_Search || !w.m_Search.m_bReturn) selected = m_Planner.Select(w);
+			if (!selected && w.m_Search && !w.m_Search.m_bReturn) return;
+			if (!selected) selected = m_Planner.SelectReturn(w);
+			if (selected)
+			{
+				BeginJobLeg(w);
+				return;
+			}
+			if (w.m_Search) return;
+			w.m_iReturnAttempts++;
+			if (w.m_iReturnAttempts >= m_Config.m_iReturnSearchMaxAttempts)
+				m_Vehicles.RetireLogistics(w, m_Book, "NO_SAFE_RETURN_STORAGE_BUDGET_EXHAUSTED");
+			else DeferWorker(w, now, "NO_SAFE_RETURN_STORAGE");
+			return;
+		}
+		if (!homeLive || w.m_bRetireAfterCargo)
+		{
+			m_Vehicles.RetireLogistics(w, m_Book, "DEPOT_UNAVAILABLE_EMPTY");
+			return;
+		}
+		if (m_Planner.Select(w))
+		{
+			BeginJobLeg(w);
+			return;
+		}
+		if (w.m_Search) return;
+		if (w.m_ePhase == AICF_ELogisticsPhase.RETURN_HOME) return;
+		if (w.m_ePhase == AICF_ELogisticsPhase.IDLE_AT_DEPOT && w.m_iIdleAtMs > 0 &&
+			vector.DistanceXZ(w.m_Vehicle.GetOrigin(), w.m_vParking) <= m_Config.m_fArrivalRadiusM)
+		{
+			Physics parked = w.m_Vehicle.GetPhysics();
+			if (!parked || parked.GetVelocity().Length() > m_Config.m_fStationarySpeedMps)
+			{
+				w.m_iIdleAtMs = now;
+				return;
+			}
+			if (now - w.m_iIdleAtMs >= m_Config.m_iIdleRetireMs) m_Vehicles.RetireLogistics(w, m_Book, "IDLE_EMPTY_HOME_PARKING");
+			return;
+		}
+		w.Log("LOGISTICS_RETURNING", "reason=EMPTY_RETURN_HOME");
+		if (!m_Vehicles.BeginLogisticsLeg(w, w.m_vParking, AICF_ELogisticsPhase.RETURN_HOME)) m_Vehicles.RetireLogistics(w, m_Book, "HOME_LEG_REJECTED");
 	}
 
 	protected void MaintainWorker(AICF_LogisticsWorker w, int now)
