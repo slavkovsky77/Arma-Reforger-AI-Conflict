@@ -1892,6 +1892,10 @@ class AICF_VehicleAcquisitionFlow
 			case AICF_EGroupUnitType.MOTORIZED_ARMED_LIGHT:
 				kind = AICF_EVehicleKind.ARMED_LIGHT;
 				return true;
+			// ZCR: infantry teams ride light transport (M998, UAZ) on long marches.
+			case AICF_EGroupUnitType.INFANTRY:
+				kind = AICF_EVehicleKind.LIGHT_TRANSPORT;
+				return true;
 		}
 		return false;
 	}
