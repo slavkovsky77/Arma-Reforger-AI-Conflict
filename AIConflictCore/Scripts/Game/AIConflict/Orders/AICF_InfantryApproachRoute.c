@@ -70,7 +70,73 @@ class AICF_InfantryApproachRoute
 		float maxOffset = Math.Min(200.0, length * 0.2);
 		offset = Math.Clamp(offset, -maxOffset, maxOffset);
 		candidate = m_vOrigin + direction * nextProgress + lateral * offset;
+		candidate = TowardCover(candidate, direction, lateral);
 		return vector.DistanceXZ(candidate, objective) + 40.0 < vector.DistanceXZ(leaderPosition, objective);
+	}
+
+	// ZCR, 19 Oct (Martin: "they just walk to the points through no cover"): each step of the march
+	// ends at the best cover within 60 m of its lane point - under trees or a roof, beside a building,
+	// a wall or a rock - so a team goes from tree line to tree line instead of stopping in a field.
+	// No cover there: the lane point as before.
+	protected static ref TraceParam s_CoverTrace;
+
+	protected vector TowardCover(vector point, vector direction, vector lateral)
+	{
+		BaseWorld world = GetGame().GetWorld();
+		if (!world)
+			return point;
+		vector best = point;
+		int bestScore = 0;
+		float bestDistance = 1e9;
+		array<float> along = {0, -40, 40};
+		array<float> across = {0, -30, 30, -60, 60};
+		foreach (float a : along)
+		{
+			foreach (float b : across)
+			{
+				vector p = point + direction * a + lateral * b;
+				p[1] = world.GetSurfaceY(p[0], p[2]);
+				if (ChimeraWorldUtils.TryGetWaterSurfaceSimple(world, p - "0 0.5 0"))
+					continue;
+				int score = CoverScore(world, p);
+				float d = vector.DistanceXZ(p, point);
+				if (score > bestScore || (score == bestScore && score > 0 && d < bestDistance))
+				{
+					best = p;
+					bestScore = score;
+					bestDistance = d;
+				}
+			}
+		}
+		return best;
+	}
+
+	// 2 for something overhead (a tree crown, a roof), 1 for something solid within 5 m around at
+	// chest height on at least two sides (a building, a wall, rocks, trunks, a crest).
+	protected static int CoverScore(BaseWorld world, vector p)
+	{
+		if (!s_CoverTrace)
+			s_CoverTrace = new TraceParam();
+		s_CoverTrace.Flags = TraceFlags.ENTS | TraceFlags.WORLD;
+		s_CoverTrace.TargetLayers = EPhysicsLayerDefs.ViewGeometry | EPhysicsLayerDefs.Foliage | EPhysicsLayerDefs.FireGeometry;
+		s_CoverTrace.Exclude = null;
+		int score;
+		s_CoverTrace.Start = p + "0 1.5 0";
+		s_CoverTrace.End = p + "0 16 0";
+		if (world.TraceMove(s_CoverTrace, null) < 1.0)
+			score += 2;
+		int sides;
+		for (int k; k < 8; k++)
+		{
+			float r = k * 45 * Math.DEG2RAD;
+			s_CoverTrace.Start = p + "0 1 0";
+			s_CoverTrace.End = p + Vector(Math.Cos(r) * 5, 1, Math.Sin(r) * 5);
+			if (world.TraceMove(s_CoverTrace, null) < 1.0)
+				sides++;
+		}
+		if (sides >= 2)
+			score += 1;
+		return score;
 	}
 
 	bool TryResolve(SCR_AIGroup group, int numericSlot, vector objective, out vector endpoint, out bool pending)

@@ -678,10 +678,17 @@ class AICF_VehicleCoordinator
 			reason = orderOwnershipFence;
 			return false;
 		}
+		// ZCR, 19 Oct (Martin: "drive to a point with cover, dismount, clear the position"; light
+		// vehicles, not only APCs): every infantry team was refused here - not one ride all day, 270-746
+		// refusals a match. Infantry teams ride when the march is long (-aicfInfantryRideMeters, 500 m).
 		if (slot.GetUnitType() == AICF_EGroupUnitType.INFANTRY)
 		{
-			reason = "COMMANDER_INFANTRY_PROFILE";
-			return false;
+			IEntity marcher = AICF_GroupRuntime.ResolveAliveLeader(assignment.GetGroup());
+			if (!marcher || vector.DistanceXZ(marcher.GetOrigin(), assignment.GetTargetPosition()) < AICF_Stage1Config.InfantryRideMeters())
+			{
+				reason = "INFANTRY_SHORT_MARCH";
+				return false;
+			}
 		}
 		int alive = AICF_GroupRuntime.CountAliveAgents(assignment.GetGroup());
 		if (alive < m_Config.GetMinimumVehicleRequestAgents())

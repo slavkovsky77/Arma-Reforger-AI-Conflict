@@ -27,6 +27,13 @@ class AICF_GroupCohesionPolicy
 			applied = true;
 		}
 
+		// Teams jog between points (ZCR, 19 Oct - Martin: "they just walk to the points through no
+		// cover"): the group's own movement speed, so the open stretches are crossed at a run, not
+		// at a stroll. Fights keep the game's own combat movement.
+		SCR_AIGroupSettingsComponent settings = SCR_AIGroupSettingsComponent.Cast(group.FindComponent(SCR_AIGroupSettingsComponent));
+		if (settings)
+			settings.AddSetting(SCR_AIGroupCharactersMovementSpeedSetting.Create(SCR_EAISettingOrigin.COMMANDING, EMovementType.RUN), false, true);
+
 		return applied;
 	}
 

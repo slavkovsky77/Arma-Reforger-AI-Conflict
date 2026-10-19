@@ -40,6 +40,15 @@ class AICF_Stage1Config
 		return CliGroupSize("aicfMusterSize", DEFAULT_MUSTER_SIZE);
 	}
 
+	// Infantry teams ride a vehicle to marches this long (ZCR; AI Conflict never let infantry ride).
+	static float InfantryRideMeters()
+	{
+		string value;
+		if (System.GetCLIParam("aicfInfantryRideMeters", value) && !value.IsEmpty())
+			return Math.Clamp(value.ToFloat(), 300, 5000);
+		return 500;
+	}
+
 	protected static int CliGroupSize(string name, int fallback)
 	{
 		string value;
