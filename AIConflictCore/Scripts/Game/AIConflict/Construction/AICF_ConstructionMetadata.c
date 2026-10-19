@@ -151,12 +151,22 @@ class AICF_ConstructionMetadata
 		m_sInvalidReason = "FACTION_LABEL_MISSING";
 		if (!info.HasEntityLabel(faction.GetFactionLabel()))
 			return;
-		m_sInvalidReason = "SERVICE_LABEL_MISSING";
-		if (!info.HasEntityLabel(ServiceLabel(type)))
-			return;
-		m_sInvalidReason = "SERVICE_TRAIT_MISSING";
-		if (!info.HasEntityLabel(EEditableEntityLabel.TRAIT_SERVICE))
-			return;
+		if (type == AICF_EConstructionType.FORTIFICATION)
+		{
+			// ZCR: a fortification has no service - its own trait instead.
+			m_sInvalidReason = "FORTIFICATION_TRAIT_MISSING";
+			if (!info.HasEntityLabel(EEditableEntityLabel.TRAIT_FORTIFICATION))
+				return;
+		}
+		else
+		{
+			m_sInvalidReason = "SERVICE_LABEL_MISSING";
+			if (!info.HasEntityLabel(ServiceLabel(type)))
+				return;
+			m_sInvalidReason = "SERVICE_TRAIT_MISSING";
+			if (!info.HasEntityLabel(EEditableEntityLabel.TRAIT_SERVICE))
+				return;
+		}
 		info.GetEntityLabels(m_aLabels);
 		m_sInvalidReason = "OUTLINE_MANAGER_MISSING";
 		if (!manager.GetOutlineManager())
@@ -231,7 +241,7 @@ class AICF_ConstructionMetadata
 		ReleasePreview();
 		m_iGeometryCpuMs += System.GetTickCount() - before;
 		m_bGeometryLoaded = true;
-		m_bValid = !m_bGeometryError && m_iMeshes > 0 && m_iRequiredServices > 0 && m_vMax[0] > m_vMin[0] && m_vMax[2] > m_vMin[2];
+		m_bValid = !m_bGeometryError && m_iMeshes > 0 && (m_iRequiredServices > 0 || m_eType == AICF_EConstructionType.FORTIFICATION) && m_vMax[0] > m_vMin[0] && m_vMax[2] > m_vMin[2];
 		if (m_aCollisionVolumes.IsEmpty())
 			m_bValid = false;
 		if (IsDepot() && (m_aExitPairs.IsEmpty() || m_aExitPairs.Count() > 4))

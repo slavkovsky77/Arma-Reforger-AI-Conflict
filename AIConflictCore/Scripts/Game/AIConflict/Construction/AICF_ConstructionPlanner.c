@@ -155,7 +155,8 @@ class AICF_ConstructionPlanner
 					Cancel(state, "LAYOUT_REMOVED");
 				else if (order.m_Composition.IsCompositionSpawned())
 				{
-					if (!AICF_ConstructionMetadata.HasOnlineService(order.m_Composition.GetOwner(), order.m_eType))
+					// ZCR: a fortification has no service to come online - built is done.
+					if (order.m_eType != AICF_EConstructionType.FORTIFICATION && !AICF_ConstructionMetadata.HasOnlineService(order.m_Composition.GetOwner(), order.m_eType))
 						continue;
 					order.m_bSiteReserved = false;
 					order.m_sReason = "STOCK_SERVICE_ONLINE";
@@ -653,8 +654,56 @@ class AICF_ConstructionPlanner
 		return true;
 	}
 
+	// ZCR: fortifications per base near the front (-aicfFortificationsPerBase, default 2; 0 = none).
+	static int FortificationsPerBase()
+	{
+		string value;
+		if (System.GetCLIParam("aicfFortificationsPerBase", value) && !value.IsEmpty())
+			return Math.ClampInt(value.ToInt(), 0, 6);
+		return 2;
+	}
+
+	// ZCR: a base is at the front when an enemy-held base is within 1.5 km - only there are bunkers built.
+	protected bool AtFront(AICF_ConstructionOrder order)
+	{
+		if (!m_BaseSystem || !order.m_Base || !order.m_Base.GetOwner() || !order.m_Faction)
+			return false;
+		vector at = order.m_Base.GetOwner().GetOrigin();
+		array<SCR_MilitaryBaseComponent> bases = {};
+		m_BaseSystem.GetBases(bases);
+		foreach (SCR_MilitaryBaseComponent other : bases)
+		{
+			SCR_CampaignMilitaryBaseComponent campaignBase = SCR_CampaignMilitaryBaseComponent.Cast(other);
+			if (!campaignBase || !campaignBase.GetOwner() || !campaignBase.GetFaction() || campaignBase.GetFaction() == order.m_Faction)
+				continue;
+			if (vector.DistanceXZ(campaignBase.GetOwner().GetOrigin(), at) < 1500)
+				return true;
+		}
+		return false;
+	}
+
+	// ZCR: fortifications standing within the base's building radius (the inventory scan).
+	protected int Fortifications()
+	{
+		int n;
+		foreach (IEntity entity : m_aInventory)
+		{
+			if (!entity)
+				continue;
+			SCR_EditableEntityComponent editable = SCR_EditableEntityComponent.Cast(entity.FindComponent(SCR_EditableEntityComponent));
+			if (!editable)
+				continue;
+			SCR_EditableEntityUIInfo info = SCR_EditableEntityUIInfo.Cast(editable.GetInfo());
+			if (info && info.HasEntityLabel(EEditableEntityLabel.TRAIT_FORTIFICATION))
+				n++;
+		}
+		return n;
+	}
+
 	protected bool Covered(AICF_ConstructionOrder order, AICF_EConstructionType type)
 	{
+		if (type == AICF_EConstructionType.FORTIFICATION)
+			return Fortifications() >= FortificationsPerBase() || !AtFront(order);
 		foreach (IEntity entity : m_aInventory)
 		{
 			if (!entity)

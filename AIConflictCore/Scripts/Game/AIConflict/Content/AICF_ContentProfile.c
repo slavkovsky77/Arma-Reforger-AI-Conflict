@@ -158,6 +158,8 @@ class AICF_ContentProfile
 				case AICF_EConstructionType.LIGHT_DEPOT: return "{A0FEA3E718F5B605}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_VehicleMaintenance_S_Conflict_US_01.et";
 				case AICF_EConstructionType.LARGE_BARRACKS: return "{3C2CFF03FF61BE7A}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatLarge/E_LivingArea_L_Conflict_US_01.et";
 				case AICF_EConstructionType.HEAVY_DEPOT: return "{7AD06D9CF2672AC5}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatMedium/E_VehicleMaintenance_M_Conflict_US_01.et";
+				// ZCR: Conflict's own buildable bunker (TRAIT_FORTIFICATION, composition id 52 on Arland).
+				case AICF_EConstructionType.FORTIFICATION: return "{E87F2E0B5C56A1C3}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_Bunker_S_US_01.et";
 			}
 		}
 		if (stableKey == "USSR")
@@ -169,6 +171,7 @@ class AICF_ContentProfile
 				case AICF_EConstructionType.LIGHT_DEPOT: return "{5ACECF41C167567D}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_VehicleMaintenance_S_Conflict_USSR_01.et";
 				case AICF_EConstructionType.LARGE_BARRACKS: return "{D44C687485600B72}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatLarge/E_LivingArea_L_Conflict_USSR_01.et";
 				case AICF_EConstructionType.HEAVY_DEPOT: return "{6676FBB212B337D6}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatMedium/E_VehicleMaintenance_M_Conflict_USSR_01.et";
+				case AICF_EConstructionType.FORTIFICATION: return "{4885DEA01D687DB3}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_Bunker_S_USSR_01.et";
 			}
 		}
 		return ResourceName.Empty;
