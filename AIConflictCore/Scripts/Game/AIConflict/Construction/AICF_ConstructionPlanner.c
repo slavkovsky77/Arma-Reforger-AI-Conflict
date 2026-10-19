@@ -26,6 +26,26 @@ class AICF_ConstructionPlanner
 	protected int m_iMaxUpdateMs;
 	protected int m_iUpdates;
 
+	// ZCR: what a side's builders are doing now, for the commander bot's panel (Martin, 19 Oct: "show the
+	// engineering goals in the overview"): per order its base, what ("light depot") and whether it is
+	// being built (else a site is being chosen).
+	static void AICF_Orders(FactionKey side, notnull array<SCR_CampaignMilitaryBaseComponent> bases, notnull array<string> what, notnull array<bool> building)
+	{
+		if (!s_Instance)
+			return;
+		foreach (AICF_ConstructionBaseState state : s_Instance.m_aBases)
+		{
+			if (!state || !state.m_Order || state.m_Order.m_sFaction != side || !state.m_Base)
+				continue;
+			string kind = typename.EnumToString(AICF_EConstructionType, state.m_Order.m_eType);
+			kind.ToLower();
+			kind.Replace("_", " ");
+			bases.Insert(state.m_Base);
+			what.Insert(kind);
+			building.Insert(state.m_Order.m_bAccepted);
+		}
+	}
+
 	void Start(SCR_GameModeCampaign campaign, AICF_BaseBuilderService builders, AICF_EconomySystem economy, AICF_AICommander us, AICF_AICommander ussr)
 	{
 		if (!Replication.IsServer() || !campaign || !campaign.IsMaster())
