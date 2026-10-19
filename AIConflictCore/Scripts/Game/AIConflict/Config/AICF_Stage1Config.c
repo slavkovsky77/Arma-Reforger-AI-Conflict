@@ -46,7 +46,7 @@ class AICF_Stage1Config
 		string value;
 		if (System.GetCLIParam("aicfInfantryRideMeters", value) && !value.IsEmpty())
 			return Math.Clamp(value.ToFloat(), 300, 5000);
-		return 500;
+		return 300;
 	}
 
 	protected static int CliGroupSize(string name, int fallback)

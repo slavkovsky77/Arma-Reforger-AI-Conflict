@@ -4,7 +4,8 @@ class AICF_Stage3Config
 {
 	static const int DEFAULT_TRANSPORTS_PER_FACTION = 10;
 	static const int DEFAULT_ARMED_LIGHT_PER_FACTION = 0;
-	static const int DEFAULT_MAX_VEHICLES_PER_FACTION = 10;
+	// ZCR: 16 (was 10) - with infantry teams riding, the cap held 40-48 requests a match (Martin: "use vehicles more").
+	static const int DEFAULT_MAX_VEHICLES_PER_FACTION = 16;
 	static const int DEFAULT_BOARDING_TIMEOUT_MS = 25000;
 	static const int DEFAULT_BOARDING_APPROACH_TIMEOUT_MS = 60000;
 	static const int DEFAULT_PASSENGER_BOARDING_TIMEOUT_MS = 30000;

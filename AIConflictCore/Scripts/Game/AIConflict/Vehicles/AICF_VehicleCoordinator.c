@@ -680,7 +680,7 @@ class AICF_VehicleCoordinator
 		}
 		// ZCR, 19 Oct (Martin: "drive to a point with cover, dismount, clear the position"; light
 		// vehicles, not only APCs): every infantry team was refused here - not one ride all day, 270-746
-		// refusals a match. Infantry teams ride when the march is long (-aicfInfantryRideMeters, 500 m).
+		// refusals a match. Infantry teams ride when the march is long (-aicfInfantryRideMeters, 300 m).
 		if (slot.GetUnitType() == AICF_EGroupUnitType.INFANTRY)
 		{
 			IEntity marcher = AICF_GroupRuntime.ResolveAliveLeader(assignment.GetGroup());
