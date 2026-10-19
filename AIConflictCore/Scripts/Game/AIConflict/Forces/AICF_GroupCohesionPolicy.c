@@ -2,7 +2,9 @@
 // soldiers or overriding their combat reactions.
 class AICF_GroupCohesionPolicy
 {
-	static const string FORMATION_NAME = "Column";
+	// A wedge, not single file (ZCR, 19 Oct - Martin: a whole squad walking in a line down a road
+	// "would never happen").
+	static const string FORMATION_NAME = "Wedge";
 
 	bool Apply(SCR_AIGroup group)
 	{

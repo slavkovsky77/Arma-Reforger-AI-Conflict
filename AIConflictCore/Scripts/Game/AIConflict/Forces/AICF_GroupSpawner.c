@@ -387,7 +387,18 @@ class AICF_GroupSpawner
 
 	protected vector GetSlotOffset(int slotId)
 	{
-		switch (slotId % AICF_Stage1Config.GROUP_SLOTS_PER_FACTION)
+		// Teams 10-19 (fireteams, ZCR): the same grid one row further out.
+		int k = slotId % AICF_Stage1Config.GROUP_SLOTS_PER_FACTION;
+		if (k >= 10)
+		{
+			vector o = GetSlotOffset(k - 10);
+			if (o[2] > 0)
+				o[2] = o[2] + 6;
+			else
+				o[2] = o[2] - 6;
+			return o;
+		}
+		switch (k)
 		{
 			case 0:
 				return "12 0 6";

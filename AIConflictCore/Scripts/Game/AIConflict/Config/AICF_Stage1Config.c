@@ -4,20 +4,22 @@ class AICF_Stage1Config
 	static const string AI_COMMANDER_MODE_BOTH = "BOTH";
 	static const string AI_COMMANDER_MODE_US = "US";
 	static const string AI_COMMANDER_MODE_USSR = "USSR";
-	static const int GROUP_SLOTS_PER_FACTION = 10;
-	static const int DEFAULT_GROUP_SIZE = 10;
+	// Fireteams (ZCR, 19 Oct - Martin: "groups should be smaller, 2-5 people max, so it's realistic";
+	// Arma 3's teams were 4): 20 teams of 5 per side instead of 10 squads of 10 - the same 100 soldiers.
+	static const int GROUP_SLOTS_PER_FACTION = 20;
+	static const int DEFAULT_GROUP_SIZE = 5;
 	static const int DEFAULT_FULL_SIZE_GROUPS_PER_FACTION = GROUP_SLOTS_PER_FACTION;
 	static const int MIN_GROUP_SIZE = 1;
-	static const int MAX_GROUP_SIZE = 10;
+	static const int MAX_GROUP_SIZE = 5;
 	// Compatibility alias for diagnostics and older static contracts. Runtime
 	// roster gates use each slot's commander-selected desired size.
 	static const int MANAGED_GROUP_SIZE = DEFAULT_GROUP_SIZE;
-	static const int ATTACK_SLOTS_PER_FACTION = 6;
-	static const int DEFEND_SLOTS_PER_FACTION = 4;
+	static const int ATTACK_SLOTS_PER_FACTION = 12;
+	static const int DEFEND_SLOTS_PER_FACTION = 8;
 	static const int RESERVE_SLOTS_PER_FACTION = 0;
-	static const int LEGACY_ATTACK_SLOTS_PER_FACTION = 5;
-	static const int LEGACY_DEFEND_SLOTS_PER_FACTION = 3;
-	static const int LEGACY_RESERVE_SLOTS_PER_FACTION = 2;
+	static const int LEGACY_ATTACK_SLOTS_PER_FACTION = 10;
+	static const int LEGACY_DEFEND_SLOTS_PER_FACTION = 6;
+	static const int LEGACY_RESERVE_SLOTS_PER_FACTION = 4;
 	static const int ROLE_MINIMUM_DWELL_INTERVALS = 2;
 
 	static const int DEFAULT_INITIAL_TICKETS = 12;
