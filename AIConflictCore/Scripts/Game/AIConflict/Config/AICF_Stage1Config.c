@@ -21,6 +21,32 @@ class AICF_Stage1Config
 	static const int LEGACY_DEFEND_SLOTS_PER_FACTION = 6;
 	static const int LEGACY_RESERVE_SLOTS_PER_FACTION = 4;
 	static const int ROLE_MINIMUM_DWELL_INTERVALS = 2;
+	// Teams that start small and wait for the rest (ZCR, 19 Oct - Martin: "many soldiers just chilling
+	// in the base doing nothing", "doing push-ups"): a side's barracks recruits one soldier at a time
+	// for one team at a time, so teams that started as 1 man waited at the main base 10-20 minutes
+	// (two armies on Arland: the first team out at 13.5 min, the other side's at 21 min, with over
+	// 1000 supplies in stock). Infantry teams now start with 3 of their 5 and set out once they have 3
+	// (-aicfInfantryDeploySize, -aicfMusterSize: 1-5).
+	static const int DEFAULT_INFANTRY_DEPLOY_SIZE = 3;
+	static const int DEFAULT_MUSTER_SIZE = 3;
+
+	static int InfantryDeploySize()
+	{
+		return CliGroupSize("aicfInfantryDeploySize", DEFAULT_INFANTRY_DEPLOY_SIZE);
+	}
+
+	static int MusterSize()
+	{
+		return CliGroupSize("aicfMusterSize", DEFAULT_MUSTER_SIZE);
+	}
+
+	protected static int CliGroupSize(string name, int fallback)
+	{
+		string value;
+		if (System.GetCLIParam(name, value) && !value.IsEmpty())
+			return Math.ClampInt(value.ToInt(), MIN_GROUP_SIZE, MAX_GROUP_SIZE);
+		return fallback;
+	}
 
 	static const int DEFAULT_INITIAL_TICKETS = 12;
 	static const int DEFAULT_REPLACEMENT_TICKET_COST = 1;

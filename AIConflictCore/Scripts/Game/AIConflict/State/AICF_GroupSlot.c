@@ -371,7 +371,7 @@ class AICF_GroupSlot
 	int GetDeploymentSize()
 	{
 		if (m_UnitType == AICF_EGroupUnitType.INFANTRY)
-			return AICF_Stage1Config.MIN_GROUP_SIZE;
+			return Math.Min(m_iDesiredSize, AICF_Stage1Config.InfantryDeploySize());   // ZCR: 3 of 5
 		return m_iDesiredSize;
 	}
 
@@ -424,8 +424,9 @@ class AICF_GroupSlot
 
 	bool CompleteInfantryMusterIfReady()
 	{
+		// ZCR: out with 3 (AICF_Stage1Config.MusterSize), not only when all 5 are in.
 		if (!Replication.IsServer() || !IsCombatReady() ||
-			AICF_GroupRuntime.CountAliveAgents(m_Group) < GetDesiredSize())
+			AICF_GroupRuntime.CountAliveAgents(m_Group) < Math.Min(GetDesiredSize(), AICF_Stage1Config.MusterSize()))
 			return false;
 		m_bInfantryMusterComplete = true;
 		return true;
