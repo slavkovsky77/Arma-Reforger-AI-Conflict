@@ -5,6 +5,14 @@ class AICF_LogisticsLedger
 	ref array<ref AICF_LogisticsJob> m_aJobs = {};
 	protected int m_iNextToken;
 	protected bool m_bStopped;
+	// ZCR: the commander bot's screen shows the supply trucks on the road (Martin: "a supply chain and
+	// logistics overview - important to see for debugging").
+	static AICF_LogisticsLedger s_Current;
+
+	void AICF_LogisticsLedger()
+	{
+		s_Current = this;
+	}
 
 	float Reserved(AICF_LogisticsResourcePool pool, bool incoming, AICF_LogisticsJob exclude = null)
 	{
