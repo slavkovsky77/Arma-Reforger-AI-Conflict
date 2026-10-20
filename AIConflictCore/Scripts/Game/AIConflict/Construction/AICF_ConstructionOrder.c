@@ -1,8 +1,10 @@
 enum AICF_EConstructionType
 {
 	SMALL_BARRACKS,
-	ARMORY,
+	// ZCR: the light vehicle depot before the armory - supply trucks and rides come from depots, and
+	// with armories first no depot was ever afforded (20 Oct: no supply truck on the road all match).
 	LIGHT_DEPOT,
+	ARMORY,
 	LARGE_BARRACKS,
 	HEAVY_DEPOT,
 	FORTIFICATION,      // ZCR: a bunker at a base near the front (Martin, 19 Oct: "AI should build bunkers")

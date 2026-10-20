@@ -1874,6 +1874,14 @@ class AICF_VehicleAcquisitionFlow
 			nowMs);
 	}
 
+	static int ArmedRideEvery()
+	{
+		string value;
+		if (System.GetCLIParam("aicfArmedRideEvery", value) && !value.IsEmpty())
+			return Math.ClampInt(value.ToInt(), 0, 20);
+		return 3;
+	}
+
 	protected bool TryResolveVehicleKind(
 		AICF_StrategicAssignmentSnapshot assignment,
 		out AICF_EVehicleKind kind)
@@ -1892,10 +1900,18 @@ class AICF_VehicleAcquisitionFlow
 			case AICF_EGroupUnitType.MOTORIZED_ARMED_LIGHT:
 				kind = AICF_EVehicleKind.ARMED_LIGHT;
 				return true;
-			// ZCR: infantry teams ride light transport (M998, UAZ) on long marches.
+			// ZCR: infantry teams ride light transport (M998, UAZ) on long marches - and every third team
+			// an armed light vehicle (M1025 M2, UAZ-469 PKM, BRDM-2) with its gunner manned by the team
+			// (Martin, 20 Oct: "use combat vehicles if possible in some cases"; -aicfArmedRideEvery N, 0 off).
 			case AICF_EGroupUnitType.INFANTRY:
-				kind = AICF_EVehicleKind.LIGHT_TRANSPORT;
+			{
+				int every = ArmedRideEvery();
+				if (every > 0 && slotId % every == every - 1)
+					kind = AICF_EVehicleKind.ARMED_LIGHT;
+				else
+					kind = AICF_EVehicleKind.LIGHT_TRANSPORT;
 				return true;
+			}
 		}
 		return false;
 	}
