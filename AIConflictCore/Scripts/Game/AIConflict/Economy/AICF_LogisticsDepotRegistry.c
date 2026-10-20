@@ -263,7 +263,12 @@ class AICF_LogisticsDepotRegistry
 		if (!home || !root) return;
 		Watch(SCR_CampaignBuildingCompositionComponent.Cast(root.FindComponent(SCR_CampaignBuildingCompositionComponent)));
 		// Один пустой slot для обнаруженного depot. Остальные появляются по заявкам.
-		if (!Find(root, faction, 0)) CreateWorker(root, faction, home, production, 0);
+		// ZCR (20 Oct): several trucks per depot, not one - with 1-2 depots a side, at most 1-2 trucks were
+		// ever on the road (extra trucks only came from players' manual orders). -aicfLogisticsTrucksPerDepot N.
+		for (int ordinal = 0; ordinal < TrucksPerDepot(); ordinal++)
+		{
+			if (!Find(root, faction, ordinal)) CreateWorker(root, faction, home, production, ordinal);
+		}
 		foreach (AICF_LogisticsWorker w : m_aWorkers)
 		{
 			if (w.m_Depot != root || w.m_DepotId != root.GetID() || w.m_Faction != faction) continue;
@@ -316,6 +321,14 @@ class AICF_LogisticsDepotRegistry
 		}
 		m_aWorkers.Insert(w);
 		return w;
+	}
+
+	static int TrucksPerDepot()
+	{
+		string value;
+		if (System.GetCLIParam("aicfLogisticsTrucksPerDepot", value) && !value.IsEmpty())
+			return Math.ClampInt(value.ToInt(), 1, 6);
+		return 3;
 	}
 
 	// Создаёт только identity; lease, AI и physical spawn остаются у vehicle domain.
