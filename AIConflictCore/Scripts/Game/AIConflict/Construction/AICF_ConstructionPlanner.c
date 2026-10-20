@@ -189,6 +189,15 @@ class AICF_ConstructionPlanner
 					order.Log("CONSTRUCTION_SEARCH_CONTINUED", "status=COMPUTING mandatory_small=1");
 				}
 			}
+			else if (MainDepot(order) && order.m_iStage != 4 && now >= order.m_iDeadline && order.m_iSearchWindows < MAIN_DEPOT_WINDOWS)
+			{
+				// ZCR: the main base's vehicle depot keeps searching (up to 6 windows of 2 min).
+				order.m_iSearchWindows++;
+				order.m_iResumeAt = now;
+				order.m_iDeadline = now + m_Config.m_iDeadlineMs;
+				order.LogSearch();
+				order.Log("CONSTRUCTION_SEARCH_CONTINUED", "status=COMPUTING main_depot=1 window=" + order.m_iSearchWindows);
+			}
 			else if (now >= order.m_iDeadline)
 			{
 				// Незавершённое вычисление продолжается без cooldown. Таймер
@@ -464,7 +473,7 @@ class AICF_ConstructionPlanner
 		{
 			if (order.m_iAttempts >= order.m_iAttemptLimit)
 			{
-				if (order.m_eType != AICF_EConstructionType.SMALL_BARRACKS)
+				if (order.m_eType != AICF_EConstructionType.SMALL_BARRACKS && (!MainDepot(order) || order.m_iAttemptLimit >= 3 * m_Config.m_iAttempts))
 				{
 					Cancel(state, "SEARCH_BUDGET_EXHAUSTED");
 					return;
@@ -655,6 +664,19 @@ class AICF_ConstructionPlanner
 	}
 
 	// ZCR: fortifications per base near the front (-aicfFortificationsPerBase, default 2; 0 = none).
+	// ZCR (20 Oct): the supply trucks load at the main base - the only base with income - but the US main
+	// base, cramped on the coast, never got a vehicle depot: its search was cut off after 2 minutes and
+	// 119 of 256 sites (all rejected), so every truck came from a forward depot and drove 2.5 km round to
+	// the main base before loading. A main base's light vehicle depot searches like the mandatory
+	// barracks: up to 6 windows of 2 minutes and 3x the sites. -aicfMainDepotOnce: the old limits.
+	static const int MAIN_DEPOT_WINDOWS = 6;
+
+	protected bool MainDepot(AICF_ConstructionOrder order)
+	{
+		return order.m_eType == AICF_EConstructionType.LIGHT_DEPOT && order.m_Base && order.m_Base.IsHQ()
+			&& !System.IsCLIParam("aicfMainDepotOnce");
+	}
+
 	static int FortificationsPerBase()
 	{
 		string value;
