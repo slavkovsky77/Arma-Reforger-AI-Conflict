@@ -6,6 +6,7 @@ class AICF_InfantryApproachRoute
 	protected vector m_vOrigin;
 	protected bool m_bDisabled;
 	protected int m_iTileWaitStartedAtMs;
+	protected string m_sSide;          // ZCR: the marching group's side, for its kill zones
 	protected vector m_vTileCandidate;
 
 	bool CanResumeTileWait(SCR_AIGroup group)
@@ -98,6 +99,9 @@ class AICF_InfantryApproachRoute
 				p[1] = world.GetSurfaceY(p[0], p[2]);
 				if (ChimeraWorldUtils.TryGetWaterSurfaceSimple(world, p - "0 0.5 0"))
 					continue;
+				// ZCR: never into the side's own kill zone (AICF_DangerZones).
+				if (!m_sSide.IsEmpty() && AICF_DangerZones.Near(p, m_sSide))
+					continue;
 				int score = CoverScore(world, p);
 				float d = vector.DistanceXZ(p, point);
 				if (score > bestScore || (score == bestScore && score > 0 && d < bestDistance))
@@ -106,6 +110,16 @@ class AICF_InfantryApproachRoute
 					bestScore = score;
 					bestDistance = d;
 				}
+			}
+		}
+		if (bestScore == 0 && !m_sSide.IsEmpty() && AICF_DangerZones.Near(point, m_sSide))
+		{
+			foreach (float side : {80.0, -80.0, 120.0, -120.0})
+			{
+				vector q = point + lateral * side;
+				q[1] = world.GetSurfaceY(q[0], q[2]);
+				if (!AICF_DangerZones.Near(q, m_sSide) && !ChimeraWorldUtils.TryGetWaterSurfaceSimple(world, q - "0 0.5 0"))
+					return q;
 			}
 		}
 		return best;
@@ -144,6 +158,8 @@ class AICF_InfantryApproachRoute
 		pending = false;
 		endpoint = objective;
 		IEntity leader = AICF_GroupRuntime.ResolveAliveLeader(group);
+		if (group && group.GetFaction())
+			m_sSide = group.GetFaction().GetFactionKey();
 		vector candidate;
 		if (!leader || !BuildCandidate(leader.GetOrigin(), objective, numericSlot, candidate))
 			return false;
