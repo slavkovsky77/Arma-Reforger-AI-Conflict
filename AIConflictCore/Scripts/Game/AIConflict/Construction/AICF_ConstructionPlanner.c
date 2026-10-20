@@ -162,6 +162,8 @@ class AICF_ConstructionPlanner
 					order.m_sReason = "STOCK_SERVICE_ONLINE";
 					order.LogSearch();
 					order.Log("CONSTRUCTION_COMPLETED", "service_online=1");
+					if (order.m_eType == AICF_EConstructionType.FORTIFICATION && order.m_Composition)
+						AICF_Fortifications.Add(order.m_Composition.GetOwner(), order.m_sFaction, order.m_sPrefab);
 					state.m_aSearchFailures[order.m_eType] = 0;
 					state.m_aSearchRetryAt[order.m_eType] = 0;
 					state.m_Order = null;

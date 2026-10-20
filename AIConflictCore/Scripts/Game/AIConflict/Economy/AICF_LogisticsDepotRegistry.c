@@ -81,9 +81,42 @@ class AICF_LogisticsDepotRegistry
 	protected bool m_bStopped;
 	protected ref array<SCR_CatalogEntitySpawnerComponent> m_aScan = {};
 	ref array<ref AICF_LogisticsWorker> m_aWorkers = {};
+	static AICF_LogisticsDepotRegistry s_Current;     // ZCR: read-only, for the watch view's truck tags
+
+	// ZCR (21 Oct, Martin: "it should be seen on vehicles if they are carrying supplies and how much"): the
+	// supply trucks on the map now - vehicle, side, phase, cargo and capacity, where from and where to.
+	static void AICF_Trucks(notnull array<ref AICF_TruckView> trucks)
+	{
+		if (!s_Current)
+			return;
+		foreach (AICF_LogisticsWorker w : s_Current.m_aWorkers)
+		{
+			if (!w || !w.m_Vehicle || !w.m_Faction)
+				continue;
+			AICF_TruckView v = new AICF_TruckView();
+			v.m_Vehicle = w.m_Vehicle;
+			v.m_sSide = w.m_Faction.GetFactionKey();
+			v.m_sPhase = typename.EnumToString(AICF_ELogisticsPhase, w.m_ePhase);
+			if (w.m_CargoPool)
+			{
+				v.m_fCargo = w.m_CargoPool.Value();
+				v.m_fCapacity = w.m_CargoPool.Capacity();
+			}
+			if (w.m_Job)
+			{
+				if (w.m_Job.m_Source)
+					v.m_From = w.m_Job.m_Source.m_Base;
+				if (w.m_Job.m_Destination)
+					v.m_To = w.m_Job.m_Destination.m_Base;
+				v.m_fPlanned = w.m_Job.m_fReservedIncoming;
+			}
+			trucks.Insert(v);
+		}
+	}
 
 	void Start(SCR_GameModeCampaign campaign)
 	{
+		s_Current = this;
 		m_bStopped = false;
 		m_BaseSystem = SCR_MilitaryBaseSystem.GetInstance();
 		m_Manager = SCR_CampaignBuildingManagerComponent.Cast(campaign.FindComponent(SCR_CampaignBuildingManagerComponent));
@@ -388,4 +421,17 @@ class AICF_LogisticsDepotRegistry
 		w.m_Entry = null;
 		return false;
 	}
+}
+
+// ZCR: one supply truck as the watch view shows it.
+class AICF_TruckView
+{
+	Vehicle m_Vehicle;
+	string m_sSide;
+	string m_sPhase;
+	float m_fCargo;
+	float m_fCapacity;
+	float m_fPlanned;
+	SCR_CampaignMilitaryBaseComponent m_From;
+	SCR_CampaignMilitaryBaseComponent m_To;
 }
