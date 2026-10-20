@@ -190,17 +190,53 @@ class AICF_LogisticsPlanner
 		if (world.GetRoadNetworkManager().GetReachableWaypointInRoad(from, center, radius, endpoint) &&
 			vector.DistanceXZ(endpoint, center) <= radius)
 			return true;
-		// ZCR: which base had no road the truck could reach (once a minute per base).
+		// ZCR (20 Oct): the reachability query gives up on long detours (the north main base to Airport Base:
+		// 2.5 km round by road, driven by a truck that morning) - the road point nearest the base, within the
+		// radius and margin, is taken and the driver's own pathfinding finds the way. -aicfLogisticsStrictRoute: no.
 		int now = System.GetTickCount();
 		int last;
-		if (!m_mRouteLogAt.Find(e.Key(), last) || now - last > 60000)
-		{
+		bool log = !m_mRouteLogAt.Find(e.Key(), last) || now - last > 60000;
+		if (log)
 			m_mRouteLogAt.Set(e.Key(), now);
+		vector road;
+		if (EdgeMarginM() > 0 && NearestRoadPoint(world.GetRoadNetworkManager(), center, radius, road))
+		{
+			endpoint = road;
+			if (log)
+				AICF_Stage4Diagnostics.Info("LOGISTICS_ROUTE_ASSUMED", string.Format("base=%1 x=%2 z=%3 radius=%4 from=%5,%6 road_m=%7",
+					e.Key(), Math.Round(center[0]), Math.Round(center[2]), Math.Round(e.m_Base.GetRadius()),
+					Math.Round(from[0]), Math.Round(from[2]), Math.Round(vector.DistanceXZ(road, center))));
+			return true;
+		}
+		if (log)
 			AICF_Stage4Diagnostics.Info("LOGISTICS_ROUTE_UNPROVEN", string.Format("base=%1 x=%2 z=%3 radius=%4 margin=%5 from=%6,%7 endpoint_m=%8",
 				e.Key(), Math.Round(center[0]), Math.Round(center[2]), Math.Round(e.m_Base.GetRadius()), EdgeMarginM(),
 				Math.Round(from[0]), Math.Round(from[2]), Math.Round(vector.DistanceXZ(endpoint, center))));
-		}
 		return false;
+	}
+
+	// The point of the road nearest 'center' within 'radius'.
+	static bool NearestRoadPoint(RoadNetworkManager roads, vector center, float radius, out vector point)
+	{
+		BaseRoad road;
+		float distance;
+		if (!roads || roads.GetClosestRoad(center, road, distance, true) < 0 || !road || distance > radius)
+			return false;
+		array<vector> points = {};
+		road.GetPoints(points);
+		float best = radius;
+		bool found;
+		foreach (vector p : points)
+		{
+			float d = vector.DistanceXZ(p, center);
+			if (d <= best)
+			{
+				best = d;
+				point = p;
+				found = true;
+			}
+		}
+		return found;
 	}
 
 	// ZCR (20 Oct): a supply truck may use the road up to 80 m beyond a base's edge and load or unload
