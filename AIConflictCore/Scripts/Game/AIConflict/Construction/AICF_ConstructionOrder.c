@@ -4,10 +4,12 @@ enum AICF_EConstructionType
 	// ZCR: the light vehicle depot before the armory - supply trucks and rides come from depots, and
 	// with armories first no depot was ever afforded (20 Oct: no supply truck on the road all match).
 	LIGHT_DEPOT,
+	// ZCR (20 Oct): fortifications third - as the last of six they never got a turn in a watched match (the
+	// round starts over after every finished building). Martin: "free guys should build much more".
+	FORTIFICATION,      // ZCR: bunkers, MG nests, sandbags, towers at a base near the front
 	ARMORY,
 	LARGE_BARRACKS,
 	HEAVY_DEPOT,
-	FORTIFICATION,      // ZCR: a bunker at a base near the front (Martin, 19 Oct: "AI should build bunkers")
 	COUNT
 }
 

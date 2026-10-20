@@ -23,10 +23,12 @@ class AICF_LogisticsConfig
 	// keep < donate. With 40/80/90 the trucks had "no open demand" (2 deliveries in 42 matches); with
 	// 65/75/80 the main base - spending on recruits, vehicles, buildings - never reached 80% to give
 	// ("no source surplus", 20 Oct 11:30). -aicfLogisticsRequestBelowPercent etc. still set them.
-	float m_fRequestBelowPercent = 35;
-	float m_fTargetPercent = 50;
-	float m_fDonateAbovePercent = 55;
-	float m_fDonorKeepPercent = 50;
+	// ZCR 20 Oct 17:10: ask below 60%, fill to 80%, give above 85%, keep 80% - at 35% the bases stayed
+	// full for the first 15 minutes of a watched match and only 3 trucks drove (4 jobs at 60% v 1 at 35%).
+	float m_fRequestBelowPercent = 60;
+	float m_fTargetPercent = 80;
+	float m_fDonateAbovePercent = 85;
+	float m_fDonorKeepPercent = 80;
 	float m_fNeutralSourceReserveSupplies;
 	float m_fOwnedSourceReserveSupplies = 200;   // ZCR: 200 (was 500) - a source keeps less back
 	float m_fMinDispatchSupplies = 50;
