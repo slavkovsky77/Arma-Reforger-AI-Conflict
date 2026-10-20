@@ -462,6 +462,23 @@ class AICF_BaseBuilderService
 		builder.m_vWorkPosition[1] = GetGame().GetWorld().GetSurfaceY(builder.m_vWorkPosition[0], builder.m_vWorkPosition[2]);
 	}
 
+	// ZCR (20 Oct): the compositions the builders are working on now, with their faction and position
+	// (for the soldier layer's work crews: idle soldiers near a site join the work).
+	static void AICF_Sites(notnull array<SCR_CampaignBuildingCompositionComponent> sites, notnull array<Faction> factions)
+	{
+		if (!Replication.IsServer() || !s_Instance || s_Instance.m_bStopped)
+			return;
+		foreach (AICF_BaseBuilder builder : s_Instance.m_aBuilders)
+		{
+			if (!builder || !builder.m_Target || !builder.m_Target.GetOwner() || builder.m_Target.GetOwner().GetID() != builder.m_TargetId)
+				continue;
+			if (!s_Instance.IsTargetValid(builder, builder.m_Target) || sites.Contains(builder.m_Target))
+				continue;
+			sites.Insert(builder.m_Target);
+			factions.Insert(builder.m_Faction);
+		}
+	}
+
 	static AICF_BaseBuilder FindWorkingOnLayout(SCR_CampaignBuildingLayoutComponent layout)
 	{
 		if (!Replication.IsServer() || !s_Instance || s_Instance.m_bStopped || !layout)
