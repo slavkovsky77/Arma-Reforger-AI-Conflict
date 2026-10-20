@@ -4,6 +4,22 @@ class AICF_TransportTripRegistry
 {
 	protected int m_iNextTripGeneration;
 	protected ref array<ref AICF_TransportTrip> m_aTrips = {};
+	protected static AICF_TransportTripRegistry s_Current;
+
+	void AICF_TransportTripRegistry()
+	{
+		s_Current = this;
+	}
+
+	// ZCR (20 Oct): a slot waiting for, staging or boarding its vehicle - the soldier layers leave such a
+	// team where it is (sent to cover 40-60 m away, 85% of the boardings ran out of time).
+	static bool Mounting(FactionKey factionKey, int slotId)
+	{
+		if (!s_Current)
+			return false;
+		AICF_TransportTrip trip = s_Current.Find(factionKey, slotId);
+		return trip && trip.GetPhase() <= AICF_ETransportTripPhase.BOARDING;
+	}
 
 	int GetCount() { return m_aTrips.Count(); }
 
