@@ -117,6 +117,10 @@ class AICF_LogisticsPlanner
 
 	static bool NeutralSource(AICF_LogisticsEndpoint e, SCR_CampaignFaction faction)
 	{
+		// ZCR: our supply depots while nobody (or FIA) holds them - every side's trucks load there.
+		if (e && e.IdentityValid() && AICF_SupplyDepots.Neutral(e.m_Base) && !e.m_Base.IsBeingCaptured() &&
+			e.m_Base.GetCaptureState() == SCR_EBaseCaptureState.NONE)
+			return true;
 		if (!e || !e.IdentityValid() || e.m_Base.GetType() != SCR_ECampaignBaseType.SOURCE_BASE ||
 			!e.m_Base.GetOwner().FindComponent(SCR_CampaignSourceBaseComponent) || e.m_Base.IsBeingCaptured() ||
 			e.m_Base.GetCaptureState() != SCR_EBaseCaptureState.NONE) return false;
@@ -145,7 +149,7 @@ class AICF_LogisticsPlanner
 		if (!OwnedSafe(e, faction) && !NeutralSource(e, faction)) return 0;
 		float reserved = m_Book.Reserved(e.m_Pool, false, exclude);
 		float commitments = m_Economy.LogisticsObligations(e.m_Base);
-		if (e.m_Base != faction.GetMainBase() && e.m_Base.GetType() == SCR_ECampaignBaseType.SOURCE_BASE)
+		if (e.m_Base != faction.GetMainBase() && (e.m_Base.GetType() == SCR_ECampaignBaseType.SOURCE_BASE || AICF_SupplyDepots.Is(e.m_Base)))
 		{
 			float keep = m_Config.m_fNeutralSourceReserveSupplies;
 			if (e.m_Owner == faction) keep = Math.Max(m_Config.m_fOwnedSourceReserveSupplies, m_Economy.LogisticsSourceReserve());

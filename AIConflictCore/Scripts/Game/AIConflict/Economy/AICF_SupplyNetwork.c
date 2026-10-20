@@ -34,7 +34,7 @@ class AICF_SupplyNetwork
 		SCR_CampaignFaction faction)
 	{
 		return base && faction &&
-			(base == faction.GetMainBase() || base.GetType() == SCR_ECampaignBaseType.SOURCE_BASE);
+			(base == faction.GetMainBase() || base.GetType() == SCR_ECampaignBaseType.SOURCE_BASE || AICF_SupplyDepots.Is(base));
 	}
 
 	bool TryGetOperationalPath(

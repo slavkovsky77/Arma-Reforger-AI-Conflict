@@ -299,6 +299,7 @@ class AICF_MatchController
 		m_Construction.Start(m_Campaign, m_BaseBuilders, m_EconomySystem, m_USAICommander, m_USSRAICommander);
 		m_Logistics = new AICF_LogisticsService(m_Campaign, m_VehicleCoordinator, m_ObjectiveGraph, m_LogisticsConfig, m_EconomySystem);
 		AICF_RoadMines.Start();     // ZCR: the world's minefields across roads off the map (-aicfKeepRoadMines)
+		AICF_SupplyDepots.Start();  // ZCR: the bases nearest the middle become supply depots (-aicfSupplyDepots N)
 		Subscribe();
 
 		string expectedPlayerFaction = m_Config.GetExpectedPlayerFaction();

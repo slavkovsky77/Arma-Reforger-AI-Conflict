@@ -338,11 +338,11 @@ class AICF_ConstructionPlanner
 			coverage.Insert(Covered(order, type) || now < state.m_aSearchRetryAt[type]);
 		for (int attempt; attempt < AICF_EConstructionType.COUNT; attempt++)
 		{
-			// ZCR (20 Oct): while the side has no vehicle depot, every base tries the light depot first
+			// ZCR (20 Oct): while the side has no vehicle depot, every base with its barracks tries the light depot first
 			// (it came up every ~6 minutes in the round of six types; one match had none after 21 min).
 			int startType = state.m_iNextType;
 			order.m_eType = AICF_EConstructionType.LIGHT_DEPOT;
-			if (!coverage[AICF_EConstructionType.LIGHT_DEPOT] && FirstDepot(order))
+			if (!coverage[AICF_EConstructionType.LIGHT_DEPOT] && coverage[AICF_EConstructionType.SMALL_BARRACKS] && FirstDepot(order))
 				startType = AICF_EConstructionType.LIGHT_DEPOT;
 			int type = commander.SelectConstructionType(coverage, startType);
 			if (type < 0)
