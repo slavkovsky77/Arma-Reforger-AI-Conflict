@@ -668,13 +668,14 @@ class AICF_ConstructionPlanner
 	// base, cramped on the coast, never got a vehicle depot: its search was cut off after 2 minutes and
 	// 119 of 256 sites (all rejected), so every truck came from a forward depot and drove 2.5 km round to
 	// the main base before loading. A main base's light vehicle depot searches like the mandatory
-	// barracks: up to 6 windows of 2 minutes and 3x the sites. -aicfMainDepotOnce: the old limits.
+	// barracks: up to 6 windows of 2 minutes and 3x the sites. Off by default (-aicfMainDepotLong): in the
+	// 20 Oct tests the long search took the planner's shared search budget and no base built a depot at all.
 	static const int MAIN_DEPOT_WINDOWS = 6;
 
 	protected bool MainDepot(AICF_ConstructionOrder order)
 	{
 		return order.m_eType == AICF_EConstructionType.LIGHT_DEPOT && order.m_Base && order.m_Base.IsHQ()
-			&& !System.IsCLIParam("aicfMainDepotOnce");
+			&& System.IsCLIParam("aicfMainDepotLong");
 	}
 
 	static int FortificationsPerBase()
