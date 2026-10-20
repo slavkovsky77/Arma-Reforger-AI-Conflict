@@ -140,11 +140,37 @@ class AICF_ContentProfile
 	}
 
 	// Exact registry allowlist, подтверждён terminal catalog 1.8.0.13.
-	bool PrepareConstructionFaction(IEntity entity, FactionKey stableKey, AICF_EConstructionType type, SCR_CampaignFaction faction)
+	bool PrepareConstructionFaction(IEntity entity, FactionKey stableKey, AICF_EConstructionType type, SCR_CampaignFaction faction, ResourceName expected = "")
 	{
+		if (expected.IsEmpty())
+			expected = GetConstructionPrefab(stableKey, type);
 		return Replication.IsServer() && entity && faction && entity.GetPrefabData() &&
-			entity.GetPrefabData().GetPrefabName() == GetConstructionPrefab(stableKey, type) &&
+			entity.GetPrefabData().GetPrefabName() == expected &&
 			SCR_Faction.GetEntityFaction(entity) == faction;
+	}
+
+	// ZCR (20 Oct, Martin: "build much more"): Conflict's own flat-slot fortifications (TRAIT_FORTIFICATION,
+	// listed by -zcrListFortifications on Arland), built in turn: bunker, sandbag positions, MG nests, tower.
+	ResourceName GetFortificationVariant(FactionKey stableKey, int index)
+	{
+		array<ResourceName> list = {};
+		if (stableKey == "US")
+			list = {"{E87F2E0B5C56A1C3}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_Bunker_S_US_01.et",
+				"{02C9F8198A7B9897}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_MachineGunNest_S_US_01.et",
+				"{31DBF7E7C9D70576}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_SandbagPosition_S_US_03.et",
+				"{6E9DCCF936BF17B9}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_MachineGunNest_S_US_02.et",
+				"{0CEFD2DFBCBB8C41}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_SandbagPosition_S_US_04.et",
+				"{E5043AB2B2C5DFE1}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_GuardTower_S_US_01.et"};
+		else if (stableKey == "USSR")
+			list = {"{4885DEA01D687DB3}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_Bunker_S_USSR_01.et",
+				"{047B9C8AAB50CE0F}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_MachineGunNest_S_USSR_01.et",
+				"{1200F6499BA275FB}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_SandbagPosition_S_USSR_03.et",
+				"{682FA86A17944120}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_MachineGunNest_S_USSR_02.et",
+				"{2F34D371EECEFCCD}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_SandbagPosition_S_USSR_04.et",
+				"{9C13C175AB00BCA8}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_GuardTower_S_USSR_01.et"};
+		if (list.IsEmpty())
+			return ResourceName.Empty;
+		return list[Math.AbsInt(index) % list.Count()];
 	}
 
 	ResourceName GetConstructionPrefab(FactionKey stableKey, AICF_EConstructionType type)

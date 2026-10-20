@@ -364,6 +364,9 @@ class AICF_ConstructionPlanner
 	protected AICF_ConstructionMetadata Metadata(AICF_ConstructionOrder order)
 	{
 		ResourceName prefab = AICF_ContentProfile.GetActive().GetConstructionPrefab(order.m_sFaction, order.m_eType);
+		if (order.m_eType == AICF_EConstructionType.FORTIFICATION)
+			prefab = AICF_ContentProfile.GetActive().GetFortificationVariant(order.m_sFaction, Fortifications() + order.m_iRevision);
+		order.m_sPrefab = prefab;
 		if (prefab.IsEmpty())
 			return null;
 		foreach (AICF_ConstructionMetadata metadata : m_aMetadata)
@@ -682,11 +685,11 @@ class AICF_ConstructionPlanner
 	{
 		string value;
 		if (System.GetCLIParam("aicfFortificationsPerBase", value) && !value.IsEmpty())
-			return Math.ClampInt(value.ToInt(), 0, 6);
-		return 2;
+			return Math.ClampInt(value.ToInt(), 0, 12);
+		return 5;      // ZCR 20 Oct: 5 (was 2) - "build much more"
 	}
 
-	// ZCR: a base is at the front when an enemy-held base is within 1.5 km - only there are bunkers built.
+	// ZCR: a base is at the front when an enemy-held base is within 2.5 km - only there are fortifications built.
 	protected bool AtFront(AICF_ConstructionOrder order)
 	{
 		if (!m_BaseSystem || !order.m_Base || !order.m_Base.GetOwner() || !order.m_Faction)
@@ -699,7 +702,7 @@ class AICF_ConstructionPlanner
 			SCR_CampaignMilitaryBaseComponent campaignBase = SCR_CampaignMilitaryBaseComponent.Cast(other);
 			if (!campaignBase || !campaignBase.GetOwner() || !campaignBase.GetFaction() || campaignBase.GetFaction() == order.m_Faction)
 				continue;
-			if (vector.DistanceXZ(campaignBase.GetOwner().GetOrigin(), at) < 1500)
+			if (vector.DistanceXZ(campaignBase.GetOwner().GetOrigin(), at) < 2500)     // ZCR 20 Oct: 2.5 km (was 1.5)
 				return true;
 		}
 		return false;

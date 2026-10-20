@@ -56,6 +56,13 @@ modded class AICF_EconomySystem
 		order.m_iCost = 0;
 		order.m_iPropsCost = 0;
 		order.m_iReserve = m_Config.GetReplacementSupplyCost() * config.m_iReserveGroups;
+		// ZCR (20 Oct): vehicle depots and fortifications pay their cost only - with a squad's replacement
+		// kept back (500) the forward bases never afforded them (60+ INSUFFICIENT_SUPPLIES a match, no depot
+		// in 14 of 16 matches, so no supply truck). Building drains the front; the trucks refill it.
+		// -aicfFullConstructionReserve keeps the reserve.
+		if ((order.m_eType == AICF_EConstructionType.LIGHT_DEPOT || order.m_eType == AICF_EConstructionType.FORTIFICATION)
+			&& !System.IsCLIParam("aicfFullConstructionReserve"))
+			order.m_iReserve = 0;
 		if (m_SupplyNetwork.IsSupplySource(order.m_Base, order.m_Faction))
 			order.m_iReserve = Math.Max(order.m_iReserve, m_Config.GetSourceReserveSupplies());
 		SCR_ResourceConsumtionResponse availability = order.m_Consumer.RequestAvailability(0);

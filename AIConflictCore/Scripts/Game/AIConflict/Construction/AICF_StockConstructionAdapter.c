@@ -131,7 +131,7 @@ class AICF_StockConstructionAdapter
 			layout = order.m_Composition.GetCompositionLayout();
 		if (entity)
 			service = SCR_ServicePointComponent.Cast(entity.FindComponent(SCR_ServicePointComponent));
-		bool factionReady = AICF_ContentProfile.GetActive().PrepareConstructionFaction(entity, order.m_sFaction, order.m_eType, order.m_Faction);
+		bool factionReady = AICF_ContentProfile.GetActive().PrepareConstructionFaction(entity, order.m_sFaction, order.m_eType, order.m_Faction, order.m_sPrefab);
 		bool valid = order.IdentityValid() && factionReady && entity && order.m_Composition && !order.m_Composition.IsCompositionSpawned() &&
 			layout && layout.GetPrefabId() == order.m_Metadata.m_iPrefabId && layout.GetToBuildValue() > 0 &&
 			layout.GetCurrentBuildValue() == 0 && SCR_Faction.GetEntityFaction(entity) == order.m_Faction &&

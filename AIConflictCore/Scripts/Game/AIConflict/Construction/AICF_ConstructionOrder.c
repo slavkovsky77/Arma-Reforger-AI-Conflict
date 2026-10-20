@@ -22,6 +22,7 @@ class AICF_ConstructionOrder
 	EntityID m_ProviderId;
 	vector m_vProviderPosition;
 	ref AICF_ConstructionMetadata m_Metadata;
+	ResourceName m_sPrefab;     // ZCR: the variant chosen for this order (fortifications rotate)
 	AICF_EConstructionType m_eType;
 	int m_iRevision;
 	int m_iGraphRevision;
