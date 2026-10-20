@@ -18,10 +18,14 @@ class AICF_LogisticsConfig
 	static const float DRIVER_INTERACTION_RADIUS_M = 50;
 	static const int REGISTRY_BUDGET = 4;
 	static const int SEARCH_BUDGET = 16;
-	float m_fRequestBelowPercent = 40;
-	float m_fTargetPercent = 80;
-	float m_fDonateAbovePercent = 90;
-	float m_fDonorKeepPercent = 80;
+	// ZCR: supplies flow from the main base to the front - a base asks below 65% (was 40) and is filled to
+	// 75% (80); a donor keeps 75% (80) and gives above 80% (90) - the order AI Conflict requires: request <
+	// target <= keep < donate. With the old thresholds the trucks waited with "no open demand" 355 times in
+	// 42 matches and delivered twice (20 Oct, Martin: "supply trucks are not used by the AI").
+	float m_fRequestBelowPercent = 65;
+	float m_fTargetPercent = 75;
+	float m_fDonateAbovePercent = 80;
+	float m_fDonorKeepPercent = 75;
 	float m_fNeutralSourceReserveSupplies;
 	float m_fOwnedSourceReserveSupplies = 500;
 	float m_fMinDispatchSupplies = 50;
