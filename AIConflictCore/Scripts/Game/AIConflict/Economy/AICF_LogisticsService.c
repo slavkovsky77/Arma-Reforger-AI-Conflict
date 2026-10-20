@@ -332,7 +332,7 @@ class AICF_LogisticsService
 		if (loading) endpoint = job.m_Source;
 		Physics physics = w.m_Vehicle.GetPhysics();
 		if (!w.Ready() || !physics || vector.DistanceXZ(w.m_Vehicle.GetOrigin(), w.m_vEndpoint) > m_Config.m_fArrivalRadiusM ||
-			vector.DistanceXZ(w.m_Vehicle.GetOrigin(), endpoint.m_Base.GetOwner().GetOrigin()) > endpoint.m_Base.GetRadius() ||
+			vector.DistanceXZ(w.m_Vehicle.GetOrigin(), endpoint.m_Base.GetOwner().GetOrigin()) > endpoint.m_Base.GetRadius() + AICF_LogisticsPlanner.EdgeMarginM() ||
 			physics.GetVelocity().Length() > m_Config.m_fStationarySpeedMps)
 		{
 			w.m_iStationaryAtMs = 0;

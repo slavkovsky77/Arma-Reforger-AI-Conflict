@@ -177,15 +177,40 @@ class AICF_LogisticsPlanner
 		return a.Key().Compare(b.Key()) < 0;
 	}
 
+	protected ref map<string, int> m_mRouteLogAt = new map<string, int>();
+
 	bool Route(vector from, AICF_LogisticsEndpoint e, out vector endpoint)
 	{
 		if (!e || !e.IdentityValid() || m_iQueries >= AICF_LogisticsConfig.SEARCH_BUDGET) return false;
 		m_iQueries++;
 		SCR_AIWorld world = SCR_AIWorld.Cast(GetGame().GetAIWorld());
 		if (!world || !world.GetRoadNetworkManager() || e.m_Base.GetRadius() <= 5) return false;
-		float radius = e.m_Base.GetRadius() - 5;
-		return world.GetRoadNetworkManager().GetReachableWaypointInRoad(from, e.m_Base.GetOwner().GetOrigin(), radius, endpoint) &&
-			vector.DistanceXZ(endpoint, e.m_Base.GetOwner().GetOrigin()) <= radius;
+		float radius = e.m_Base.GetRadius() - 5 + EdgeMarginM();
+		vector center = e.m_Base.GetOwner().GetOrigin();
+		if (world.GetRoadNetworkManager().GetReachableWaypointInRoad(from, center, radius, endpoint) &&
+			vector.DistanceXZ(endpoint, center) <= radius)
+			return true;
+		// ZCR: which base had no road the truck could reach (once a minute per base).
+		int now = System.GetTickCount();
+		int last;
+		if (!m_mRouteLogAt.Find(e.Key(), last) || now - last > 60000)
+		{
+			m_mRouteLogAt.Set(e.Key(), now);
+			AICF_Stage4Diagnostics.Info("LOGISTICS_ROUTE_UNPROVEN", string.Format("base=%1 x=%2 z=%3 radius=%4 margin=%5 from=%6,%7 endpoint_m=%8",
+				e.Key(), Math.Round(center[0]), Math.Round(center[2]), Math.Round(e.m_Base.GetRadius()), EdgeMarginM(),
+				Math.Round(from[0]), Math.Round(from[2]), Math.Round(vector.DistanceXZ(endpoint, center))));
+		}
+		return false;
+	}
+
+	// ZCR (20 Oct): a supply truck may use the road up to 80 m beyond a base's edge and load or unload
+	// there - with the road inside the base radius only, 17 of 28 waits were ROAD_ROUTE_NOT_PROVEN and
+	// trucks hardly ever left. -aicfLogisticsStrictRoute: inside the radius only.
+	static float EdgeMarginM()
+	{
+		if (System.IsCLIParam("aicfLogisticsStrictRoute"))
+			return 0;
+		return 80;
 	}
 
 	protected bool CandidateBefore(AICF_LogisticsCandidate a, AICF_LogisticsCandidate b, bool returning)
