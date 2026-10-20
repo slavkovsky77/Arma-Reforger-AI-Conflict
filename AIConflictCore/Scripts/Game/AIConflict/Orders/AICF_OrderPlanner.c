@@ -1819,6 +1819,10 @@ class AICF_OrderPlanner
 
 		vector targetRotation;
 		spawnPoint.GetPositionAndRotation(targetPosition, targetRotation);
+		// ZCR: defenders in and around the base's buildings (AICF_BuildingAnchor), not on its open ground.
+		vector anchor;
+		if (AICF_BuildingAnchor.Find(target, targetPosition, anchor))
+			targetPosition = anchor;
 		return true;
 	}
 
@@ -2144,7 +2148,7 @@ class AICF_OrderPlanner
 		{
 			scriptedWaypoint.AddSetting(SCR_AIGroupFormationSetting.Create(
 				SCR_EAISettingOrigin.WAYPOINT,
-				SCR_EAIGroupFormation.Column));
+				SCR_EAIGroupFormation.Wedge));
 		}
 		return waypoint;
 	}
@@ -2716,16 +2720,29 @@ class AICF_OrderPlanner
 		}
 
 		// The setting is copied into the group only while this AICF waypoint is
-		// current. Column reduces travel spread while stock combat behavior remains
+		// current. ZCR: a wedge (was a column: single file, one drone took several men); stock combat behavior remains
 		// free to seek cover near the objective.
 		SCR_AIWaypoint scriptedWaypoint = SCR_AIWaypoint.Cast(waypoint);
 		if (scriptedWaypoint)
 		{
 			scriptedWaypoint.AddSetting(SCR_AIGroupFormationSetting.Create(
 				SCR_EAISettingOrigin.WAYPOINT,
-				SCR_EAIGroupFormation.Column));
+				SCR_EAIGroupFormation.Wedge));
 		}
 
+		// ZCR: a defend order at a building anchor holds its 25 m round the houses.
+		if (role != AICF_EGroupRole.ATTACK && !isRelay)
+		{
+			vector anchor;
+			vector spawnAt;
+			if (target.GetSpawnPoint())
+			{
+				vector rotation;
+				target.GetSpawnPoint().GetPositionAndRotation(spawnAt, rotation);
+				if (AICF_BuildingAnchor.Find(target, spawnAt, anchor))
+					completionRadius = AICF_BuildingAnchor.DEFEND_RADIUS;
+			}
+		}
 		waypoint.SetCompletionRadius(completionRadius);
 		return waypoint;
 	}
@@ -2763,7 +2780,7 @@ class AICF_OrderPlanner
 		SCR_AIWaypoint scriptedWaypoint = SCR_AIWaypoint.Cast(waypoint);
 		if (scriptedWaypoint)
 			scriptedWaypoint.AddSetting(SCR_AIGroupFormationSetting.Create(
-				SCR_EAISettingOrigin.WAYPOINT, SCR_EAIGroupFormation.Column));
+				SCR_EAISettingOrigin.WAYPOINT, SCR_EAIGroupFormation.Wedge));
 		AICF_Stage2Diagnostics.Info("STUCK_ROUTE_ENDPOINT_SELECTED",
 			string.Format("faction=%1 slot=%2 group_generation=%3 assignment_revision=%4 target=%5 endpoint=%6 objective=%7",
 				faction.GetFactionKey(), slot.GetSlotId(), slot.GetSpawnGeneration(),
@@ -2972,7 +2989,7 @@ class AICF_OrderPlanner
 		{
 			scriptedWaypoint.AddSetting(SCR_AIGroupFormationSetting.Create(
 				SCR_EAISettingOrigin.WAYPOINT,
-				SCR_EAIGroupFormation.Column));
+				SCR_EAIGroupFormation.Wedge));
 		}
 
 		return objectiveAction;
