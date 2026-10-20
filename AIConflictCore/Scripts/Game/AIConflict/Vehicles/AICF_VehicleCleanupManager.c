@@ -2063,6 +2063,22 @@ class AICF_VehicleCleanupManager
 		}
 		if (IsVehicleUnusable(vehicle))
 			MarkRetirement(job, "WORLD_POOL_UNUSABLE");
+		// ZCR (20 Oct, Martin: "now they seem to be stuck"): an abandoned vehicle left standing on a road
+		// blocks it - a USSR UAZ given up at a junction by Military Training Area, then a US M998 drove into
+		// it. One within 5 m of a road line is retired at once. -aicfKeepRoadVehicles keeps them.
+		else if (OnRoad(vehicle))
+			MarkRetirement(job, "WORLD_POOL_ON_ROAD");
+	}
+
+	protected static bool OnRoad(Vehicle vehicle)
+	{
+		if (!vehicle || System.IsCLIParam("aicfKeepRoadVehicles"))
+			return false;
+		SCR_AIWorld aiWorld = SCR_AIWorld.Cast(GetGame().GetAIWorld());
+		if (!aiWorld)
+			return false;
+		vector road;
+		return AICF_LogisticsPlanner.NearestRoadPoint(aiWorld.GetRoadNetworkManager(), vehicle.GetOrigin(), 5, road);
 	}
 
 	protected void SelectOldestSafeOverflow(AICF_FactionFleet fleet, int nowMs)
