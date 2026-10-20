@@ -680,11 +680,11 @@ class AICF_VehicleWatchdog
 		{
 			IEntity controlled = playerManager.GetPlayerControlledEntity(playerId);
 			IEntity mainEntity = SCR_PossessingManagerComponent.GetPlayerMainEntity(playerId);
+			// ZCR: a player with no character in the world is a spectator (the commander bot's watching
+			// camera) - not near anything. It refused every unstuck rescue in the watched matches
+			// (REJECTED_PLAYER_POSITION_UNKNOWN; Martin 20 Oct: "then they go stuck").
 			if (!controlled && !mainEntity)
-			{
-				rejectionReason = "PLAYER_POSITION_UNKNOWN";
-				return false;
-			}
+				continue;
 			if (controlled)
 			{
 				float sourceDistanceSq = vector.DistanceSqXZ(controlled.GetOrigin(), source);
@@ -926,6 +926,9 @@ class AICF_VehicleWatchdog
 					observedEntities.Insert(controlled);
 				if (mainEntity && mainEntity != controlled)
 					observedEntities.Insert(mainEntity);
+				// ZCR: a spectator (no character in the world) blocks no cleanup or recovery.
+				if (observedEntities.IsEmpty())
+					continue;
 				if (observedEntities.IsEmpty())
 				{
 					playerPositionUnknown = true;
