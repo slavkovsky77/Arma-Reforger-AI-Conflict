@@ -215,38 +215,56 @@ class AICF_LogisticsPlanner
 		return false;
 	}
 
-	// The point of the road nearest 'center' within 'radius'.
+	// The point of any road nearest 'center' within 'radius' (every road in the box round it).
 	static bool NearestRoadPoint(RoadNetworkManager roads, vector center, float radius, out vector point)
 	{
-		BaseRoad road;
-		float distance;
-		if (!roads || roads.GetClosestRoad(center, road, distance, true) < 0 || !road || distance > radius)
+		if (!roads)
 			return false;
-		array<vector> points = {};
-		road.GetPoints(points);
+		array<BaseRoad> found = {};
+		roads.GetRoadsInAABB(center - Vector(radius, 200, radius), center + Vector(radius, 200, radius), found);
 		float best = radius;
-		bool found;
-		foreach (vector p : points)
+		bool any;
+		array<vector> points = {};
+		foreach (BaseRoad road : found)
 		{
-			float d = vector.DistanceXZ(p, center);
-			if (d <= best)
+			if (!road)
+				continue;
+			points.Clear();
+			road.GetPoints(points);
+			// The points are the road's bends: the nearest point on each straight piece between them.
+			for (int i = 0; i < points.Count(); i++)
 			{
-				best = d;
-				point = p;
-				found = true;
+				vector a = points[i];
+				vector b = a;
+				if (i + 1 < points.Count())
+					b = points[i + 1];
+				vector ab = b - a;
+				ab[1] = 0;
+				float len2 = ab[0] * ab[0] + ab[2] * ab[2];
+				float t = 0;
+				if (len2 > 0.01)
+					t = Math.Clamp(((center[0] - a[0]) * ab[0] + (center[2] - a[2]) * ab[2]) / len2, 0, 1);
+				vector q = a + (b - a) * t;
+				float d = vector.DistanceXZ(q, center);
+				if (d <= best)
+				{
+					best = d;
+					point = q;
+					any = true;
+				}
 			}
 		}
-		return found;
+		return any;
 	}
 
-	// ZCR (20 Oct): a supply truck may use the road up to 80 m beyond a base's edge and load or unload
+	// ZCR (20 Oct): a supply truck may use the road up to 100 m beyond a base's edge and load or unload
 	// there - with the road inside the base radius only, 17 of 28 waits were ROAD_ROUTE_NOT_PROVEN and
 	// trucks hardly ever left. -aicfLogisticsStrictRoute: inside the radius only.
 	static float EdgeMarginM()
 	{
 		if (System.IsCLIParam("aicfLogisticsStrictRoute"))
 			return 0;
-		return 80;
+		return 100;     // Arland's Airport Base: the nearest road 233 m from its centre (radius 150) - the airfield isn't road
 	}
 
 	protected bool CandidateBefore(AICF_LogisticsCandidate a, AICF_LogisticsCandidate b, bool returning)
