@@ -189,6 +189,15 @@ class AICF_ConstructionPlanner
 					order.Log("CONSTRUCTION_SEARCH_CONTINUED", "status=COMPUTING mandatory_small=1");
 				}
 			}
+			else if (FirstDepot(order) && order.m_iStage != 4 && now >= order.m_iDeadline && order.m_iSearchWindows < FIRST_DEPOT_WINDOWS)
+			{
+				// ZCR: the side's first vehicle depot keeps searching (up to 4 windows of 2 minutes).
+				order.m_iSearchWindows++;
+				order.m_iResumeAt = now;
+				order.m_iDeadline = now + m_Config.m_iDeadlineMs;
+				order.LogSearch();
+				order.Log("CONSTRUCTION_SEARCH_CONTINUED", "status=COMPUTING first_depot=1 window=" + order.m_iSearchWindows);
+			}
 			else if (MainDepot(order) && order.m_iStage != 4 && now >= order.m_iDeadline && order.m_iSearchWindows < MAIN_DEPOT_WINDOWS)
 			{
 				// ZCR: the main base's vehicle depot keeps searching (up to 6 windows of 2 min).
@@ -476,7 +485,8 @@ class AICF_ConstructionPlanner
 		{
 			if (order.m_iAttempts >= order.m_iAttemptLimit)
 			{
-				if (order.m_eType != AICF_EConstructionType.SMALL_BARRACKS && (!MainDepot(order) || order.m_iAttemptLimit >= 3 * m_Config.m_iAttempts))
+				if (order.m_eType != AICF_EConstructionType.SMALL_BARRACKS && (!MainDepot(order) || order.m_iAttemptLimit >= 3 * m_Config.m_iAttempts)
+					&& (!FirstDepot(order) || order.m_iAttemptLimit >= 2 * m_Config.m_iAttempts))
 				{
 					Cancel(state, "SEARCH_BUDGET_EXHAUSTED");
 					return;
@@ -674,6 +684,25 @@ class AICF_ConstructionPlanner
 	// barracks: up to 6 windows of 2 minutes and 3x the sites. Off by default (-aicfMainDepotLong): in the
 	// 20 Oct tests the long search took the planner's shared search budget and no base built a depot at all.
 	static const int MAIN_DEPOT_WINDOWS = 6;
+
+	// ZCR (20 Oct): while a side has no vehicle depot at all (no supply truck can start), its light depot
+	// searches keep going - up to 4 windows of 2 minutes and twice the sites (a window checked only 45-75
+	// sites at crowded bases and the side's first depot came 10+ minutes late or never). Once the side has
+	// a depot, the old limits. -aicfFirstDepotOnce turns it off.
+	static const int FIRST_DEPOT_WINDOWS = 4;
+
+	protected bool FirstDepot(AICF_ConstructionOrder order)
+	{
+		if (order.m_eType != AICF_EConstructionType.LIGHT_DEPOT || !order.m_Faction || System.IsCLIParam("aicfFirstDepotOnce"))
+			return false;
+		foreach (SCR_CatalogEntitySpawnerComponent spawner : SCR_CatalogEntitySpawnerComponent.INSTANCES)
+		{
+			if (spawner && (spawner.GetType() == SCR_EServicePointType.LIGHT_VEHICLE_DEPOT || spawner.GetType() == SCR_EServicePointType.HEAVY_VEHICLE_DEPOT)
+				&& spawner.GetFaction() == order.m_Faction)
+				return false;
+		}
+		return true;
+	}
 
 	protected bool MainDepot(AICF_ConstructionOrder order)
 	{
