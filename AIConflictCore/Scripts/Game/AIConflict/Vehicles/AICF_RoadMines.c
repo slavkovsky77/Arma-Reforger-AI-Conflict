@@ -79,10 +79,13 @@ class AICF_RoadMines
 	// in a walled checkpoint with Czech hedgehogs across the road east of the Airport (1332, 2360); AI
 	// drivers can't open it (AI Conflict's open-gate step failed, teleported the truck a few metres and it
 	// stuck again), and supply trucks waited there for minutes. A gate within 6 m of a road line, a
-	// hedgehog or barrier within 8 m (with the hedgehogs left the trucks still drove 4 km round the checkpoint). -aicfKeepRoadBlocks keeps them.
+	// hedgehog or barrier within 8 m (with the hedgehogs left the trucks still drove 4 km round the checkpoint).
+	// Opt-in: -aicfClearRoadBlocks. -aicfKeepRoadBlocks keeps them.
 	protected static void ClearRoadBlocks(BaseWorld world, RoadNetworkManager roads, vector mins, vector maxs)
 	{
-		if (System.IsCLIParam("aicfKeepRoadBlocks"))
+		// Martin, 21 Oct 03:05: "don't remove barriers and hedgehogs from the map by default, just improve the
+		// driving" - off unless -aicfClearRoadBlocks (minefields stay removed by default).
+		if (!System.IsCLIParam("aicfClearRoadBlocks"))
 			return;
 		int started = System.GetTickCount();
 		s_aFound = {};
