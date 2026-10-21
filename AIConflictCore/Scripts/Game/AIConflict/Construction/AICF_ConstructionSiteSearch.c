@@ -852,6 +852,8 @@ class AICF_ConstructionSiteSearch
 				}
 			}
 		}
+		if ((order.m_eType == AICF_EConstructionType.LIGHT_DEPOT || order.m_eType == AICF_EConstructionType.HEAVY_DEPOT) && !DepotRoadsOk(order, aiWorld))
+			return false;
 		TraceOBB trace = new TraceOBB();
 		for (int axis; axis < 3; axis++)
 			trace.Mat[axis] = order.m_aTransform[axis];
@@ -937,6 +939,52 @@ class AICF_ConstructionSiteSearch
 		IEntity root = entity.GetRootParent();
 		return entity.IsInherited(ChimeraCharacter) || entity.IsInherited(Vehicle) ||
 			(root && (root.IsInherited(ChimeraCharacter) || root.IsInherited(Vehicle)));
+	}
+
+	// ZCR (21 Oct, Martin's /bad: "supply depot was built on the road and vehicles get stuck"): a vehicle depot's
+	// whole footprint stays off the roads, and a road at least 3 m wide passes within 30 m of it. The check above
+	// tests only the composition's solid meshes: the USSR main base's depot at (1202, 3266) reached ~2 m into a
+	// 4.5 m road; and the Farm depot at (2118, 2952) stood 46 m from the nearest road - its three trucks stopped
+	// on the farmland 13-36 m short of the road (w2, 21 Oct 18:38). DEPOT_ON_ROAD / DEPOT_FAR_FROM_ROAD;
+	// -aicfDepotAnyRoad: as before. The near-road demand counts any road and is dropped for the forced first
+	// depot: with only roads 3 m wide counted, a 12-min test placed one depot (FAR_FROM_ROAD up to 238 per search).
+	protected bool DepotRoadsOk(AICF_ConstructionOrder order, ChimeraAIWorld aiWorld)
+	{
+		if (System.IsCLIParam("aicfDepotAnyRoad"))
+			return true;
+		bool needNear = !order.m_bForcedSmallBarracks;
+		vector center = order.m_aTransform[3];
+		vector size = order.m_Metadata.m_vMax - order.m_Metadata.m_vMin;
+		float reach = 30 + Math.Max(size[0], size[2]);
+		array<BaseRoad> roads = {};
+		aiWorld.GetRoadNetworkManager().GetRoadsInAABB(center - Vector(reach, 60, reach), center + Vector(reach, 60, reach), roads);
+		bool near;
+		vector within = Vector(30, 30, 30);
+		foreach (BaseRoad road : roads)
+		{
+			array<vector> points = {};
+			road.GetPoints(points);
+			float half = road.GetWidth() * 0.5;
+			vector buffer = Vector(half + 1, 10, half + 1);
+			for (int i = 1; i < points.Count(); i++)
+			{
+				vector start = LocalPoint(order, points[i - 1]);
+				vector end = LocalPoint(order, points[i]);
+				if (AICF_ConstructionPlanner.SegmentIntersects(start, end, order.m_Metadata.m_vMin - buffer, order.m_Metadata.m_vMax + buffer))
+				{
+					order.m_sReason = "DEPOT_ON_ROAD";
+					return false;
+				}
+				if (!near && AICF_ConstructionPlanner.SegmentIntersects(start, end, order.m_Metadata.m_vMin - within, order.m_Metadata.m_vMax + within))
+					near = true;
+			}
+		}
+		if (needNear && !near)
+		{
+			order.m_sReason = "DEPOT_FAR_FROM_ROAD";
+			return false;
+		}
+		return true;
 	}
 
 	protected static vector LocalPoint(AICF_ConstructionOrder order, vector point)
