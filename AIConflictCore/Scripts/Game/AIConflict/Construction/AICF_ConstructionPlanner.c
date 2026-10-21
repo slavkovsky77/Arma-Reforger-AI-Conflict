@@ -193,7 +193,10 @@ class AICF_ConstructionPlanner
 			}
 			else if (FirstDepot(order) && order.m_iStage != 4 && now >= order.m_iDeadline && order.m_iSearchWindows < FIRST_DEPOT_WINDOWS)
 			{
-				// ZCR: the side's first vehicle depot keeps searching (up to 4 windows of 2 minutes).
+				// ZCR: the side's first vehicle depot keeps searching (up to 4 windows of 2 minutes), from the
+				// second window with the relaxed search of the mandatory barracks.
+				if (!order.m_bForcedSmallBarracks)
+					AICF_SmallBarracksFallback.ActivateDepot(order, now, m_Config.m_iAttempts);
 				order.m_iSearchWindows++;
 				order.m_iResumeAt = now;
 				order.m_iDeadline = now + m_Config.m_iDeadlineMs;
@@ -802,7 +805,7 @@ class AICF_ConstructionPlanner
 
 	protected bool AccessClear(AICF_ConstructionOrder order)
 	{
-		if (order.m_bForcedSmallBarracks && order.m_eType == AICF_EConstructionType.SMALL_BARRACKS)
+		if (order.Forced())
 			return true;
 		array<SCR_ServicePointComponent> services = {};
 		order.m_Base.GetServices(services);

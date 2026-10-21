@@ -52,6 +52,13 @@ class AICF_ConstructionOrder
 	int m_iAttempts;
 	int m_iAttemptLimit;
 	bool m_bForcedSmallBarracks;
+
+	// The relaxed search (no worker path, worker room or access corridor check): the mandatory small
+	// barracks, and (ZCR 21 Oct) a side's first vehicle depot - one side had none all match.
+	bool Forced()
+	{
+		return m_bForcedSmallBarracks && (m_eType == AICF_EConstructionType.SMALL_BARRACKS || m_eType == AICF_EConstructionType.LIGHT_DEPOT);
+	}
 	int m_iSearchOffset;
 	int m_iBroadphaseIgnored;
 	int m_iExitOption;

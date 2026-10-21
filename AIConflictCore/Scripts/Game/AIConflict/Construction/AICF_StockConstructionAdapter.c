@@ -76,8 +76,7 @@ class AICF_StockConstructionAdapter
 {
 	void CompleteForcedSmall(AICF_ConstructionOrder order)
 	{
-		if (!Replication.IsServer() || !order || !order.m_bForcedSmallBarracks ||
-			order.m_eType != AICF_EConstructionType.SMALL_BARRACKS || !order.m_bAccepted ||
+		if (!Replication.IsServer() || !order || !order.Forced() || !order.m_bAccepted ||
 			!order.m_bPaid || !order.IdentityValid() || !order.PlacementUnchanged() ||
 			order.m_Composition.m_AICFConstructionReceipt != order || order.m_Composition.IsCompositionSpawned() ||
 			order.m_Base.AreEnemiesPresent() || order.m_Base.IsBeingCaptured() ||

@@ -35,4 +35,30 @@ class AICF_SmallBarracksFallback
 		order.m_sReason = "SMALL_BARRACKS_TIMEOUT";
 		order.Log("CONSTRUCTION_FORCED_SMALL_STARTED", "delay_ms=120000 worker_path_required=0 access_corridor_required=0 physical_clearance_required=1");
 	}
+
+	// ZCR (21 Oct): the same relaxed search for a side's first vehicle depot after its first window -
+	// the depot's vehicle exit is still checked; like the forced barracks it is completed when placed.
+	static void ActivateDepot(AICF_ConstructionOrder order, int now, int attempts)
+	{
+		if (!Replication.IsServer() || !order || order.m_eType != AICF_EConstructionType.LIGHT_DEPOT || order.m_bForcedSmallBarracks ||
+			order.m_bAccepted || order.m_bCancelled || order.m_bCommitStarted || !order.IdentityValid() || order.m_bSiteReserved || order.m_iStage == 4)
+			return;
+		order.LogSearch();
+		order.m_bForcedSmallBarracks = true;
+		AICF_ConstructionSiteSearch.ReleaseClaim(order.m_sToken);
+		order.m_aPendingCandidates.Clear();
+		order.m_Path = null;
+		order.m_Navigation = new AICF_ConstructionNavigation();
+		order.m_aPathStarts.Clear();
+		order.m_iSearchOffset = 0;
+		order.m_iAttempts = 0;
+		order.m_iAttemptLimit = attempts;
+		order.m_iStage = -1;
+		if (order.m_Metadata && order.m_Metadata.m_bGeometryLoaded)
+			order.m_iStage = 0;
+		order.m_iDeadline = now + DELAY_MS;
+		order.m_iResumeAt = 0;
+		order.m_sReason = "FIRST_DEPOT_TIMEOUT";
+		order.Log("CONSTRUCTION_FORCED_DEPOT_STARTED", "worker_path_required=0 access_corridor_required=0 physical_clearance_required=1 exit_required=1");
+	}
 }
