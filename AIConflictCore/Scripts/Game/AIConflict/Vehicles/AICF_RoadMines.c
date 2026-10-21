@@ -72,6 +72,54 @@ class AICF_RoadMines
 		AICF_Stage1Diagnostics.Info("ROAD_MINES_SCAN", string.Format("minefields=%1 removed=%2 mines_removed=%3 kept=%4 scan_ms=%5",
 			s_aFound.Count(), removed, mines, kept, System.GetTickCount() - started));
 		s_aFound = null;
+		ClearRoadBlocks(world, roads, mins, maxs);
+	}
+
+	// ZCR (21 Oct): closed gates and road blocks lying on a road are taken off too - Arland has a metal gate
+	// in a walled checkpoint with Czech hedgehogs across the road east of the Airport (1332, 2360); AI
+	// drivers can't open it (AI Conflict's open-gate step failed, teleported the truck a few metres and it
+	// stuck again), and supply trucks waited there for minutes. A gate within 6 m of a road line, a
+	// hedgehog or barrier within 3 m. -aicfKeepRoadBlocks keeps them.
+	protected static void ClearRoadBlocks(BaseWorld world, RoadNetworkManager roads, vector mins, vector maxs)
+	{
+		if (System.IsCLIParam("aicfKeepRoadBlocks"))
+			return;
+		int started = System.GetTickCount();
+		s_aFound = {};
+		world.QueryEntitiesByAABB(mins, maxs, Add, IsRoadBlock, EQueryEntitiesFlags.ALL);
+		int gates, blocks;
+		foreach (IEntity e : s_aFound)
+		{
+			if (!e)
+				continue;
+			string name = Name(e);
+			bool gate = name.Contains("Gate");
+			vector road;
+			if (!AICF_LogisticsPlanner.NearestRoadPoint(roads, e.GetOrigin(), 6, road))
+				continue;
+			if (!gate && vector.DistanceXZ(road, e.GetOrigin()) > 3)
+				continue;
+			vector at = e.GetOrigin();
+			AICF_Stage1Diagnostics.Info("ROAD_BLOCK_REMOVED", string.Format("x=%1 z=%2 road_m=%3 prefab=%4", Math.Round(at[0]), Math.Round(at[2]),
+				Math.Round(vector.DistanceXZ(road, at)), name));
+			SCR_EntityHelper.DeleteEntityAndChildren(e);
+			if (gate)
+				gates++;
+			else
+				blocks++;
+		}
+		AICF_Stage1Diagnostics.Info("ROAD_BLOCKS_SCAN", string.Format("candidates=%1 gates_removed=%2 blocks_removed=%3 scan_ms=%4",
+			s_aFound.Count(), gates, blocks, System.GetTickCount() - started));
+		s_aFound = null;
+	}
+
+	protected static bool IsRoadBlock(IEntity e)
+	{
+		if (!e || e.GetParent())
+			return false;
+		string n = Name(e);
+		return (n.Contains("Gate") && (n.Contains("DoorSet") || n.Contains("Barrier"))) || n.Contains("CzechHedgehog") ||
+			n.Contains("RoadBarrier") || n.Contains("BarrierRoad") || n.Contains("Roadblock") || n.Contains("RoadBlock");
 	}
 
 	protected static bool IsMinefield(IEntity e)
