@@ -347,7 +347,7 @@ class AICF_ConstructionPlanner
 		// Only while the side has no depot at all (21 Oct 10:50: as first written it held every later depot
 		// back too - depots built a watched match fell from 2.3 to 1.2 and supply trucks with them).
 		order.m_eType = AICF_EConstructionType.LIGHT_DEPOT;
-		if (!coverage[AICF_EConstructionType.LIGHT_DEPOT] && FirstDepot(order) && DepotUnderway(order.m_Faction, state))
+		if (!coverage[AICF_EConstructionType.LIGHT_DEPOT] && FirstDepot(order) && order.m_Base && !order.m_Base.IsHQ() && DepotUnderway(order.m_Faction, state))
 			coverage[AICF_EConstructionType.LIGHT_DEPOT] = true;
 		for (int attempt; attempt < AICF_EConstructionType.COUNT; attempt++)
 		{
@@ -710,7 +710,12 @@ class AICF_ConstructionPlanner
 	// a depot, the old limits. -aicfFirstDepotOnce turns it off.
 	static const int FIRST_DEPOT_WINDOWS = 4;
 
-	// Another base of the faction has a light depot order going (searching or building).
+	// Another base of the faction, not its main base, has a light depot order going (searching or building).
+	// ZCR (21 Oct): the main base searches for a depot alongside it, not instead - a depot there means
+	// trucks that load where they start, away from the front's drones (the US's first three drivers were
+	// killed within 2 minutes at a depot built at Farm). But held for the main base, the other bases waited
+	// 8-10 minutes in a headless test: Arland's harbour main base searched 8 minutes and found no site, the
+	// other main base built its barracks first. So both race; the first depot built starts the trucks.
 	protected bool DepotUnderway(Faction faction, AICF_ConstructionBaseState except)
 	{
 		if (!faction)
@@ -718,7 +723,7 @@ class AICF_ConstructionPlanner
 		foreach (AICF_ConstructionBaseState other : m_aBases)
 		{
 			if (other && other != except && other.m_Order && other.m_Order.m_eType == AICF_EConstructionType.LIGHT_DEPOT &&
-				other.m_Order.m_Faction == faction)
+				other.m_Order.m_Faction == faction && !(other.m_Base && other.m_Base.IsHQ()))
 				return true;
 		}
 		return false;
@@ -731,10 +736,27 @@ class AICF_ConstructionPlanner
 		foreach (SCR_CatalogEntitySpawnerComponent spawner : SCR_CatalogEntitySpawnerComponent.INSTANCES)
 		{
 			if (spawner && (spawner.GetType() == SCR_EServicePointType.LIGHT_VEHICLE_DEPOT || spawner.GetType() == SCR_EServicePointType.HEAVY_VEHICLE_DEPOT)
-				&& spawner.GetFaction() == order.m_Faction)
+				&& spawner.GetFaction() == order.m_Faction && OfOwnBase(spawner, order.m_Faction))
 				return false;
 		}
 		return true;
+	}
+
+	// ZCR (21 Oct): a depot counts only when it belongs to one of the faction's bases - supply trucks start
+	// only from those (AICF_LogisticsDepotRegistry). Arland has three world-placed USSR heavy vehicle
+	// depots that belong to no base: they turned the USSR's first-depot rules off, and in 2 of 3 watched
+	// matches the USSR built no depot at all - not one supply truck all match.
+	protected static bool OfOwnBase(SCR_CatalogEntitySpawnerComponent spawner, Faction faction)
+	{
+		array<SCR_MilitaryBaseComponent> bases = {};
+		spawner.GetBases(bases);
+		foreach (SCR_MilitaryBaseComponent b : bases)
+		{
+			SCR_CampaignMilitaryBaseComponent base = SCR_CampaignMilitaryBaseComponent.Cast(b);
+			if (base && base.GetFaction() == faction)
+				return true;
+		}
+		return false;
 	}
 
 	protected bool MainDepot(AICF_ConstructionOrder order)
