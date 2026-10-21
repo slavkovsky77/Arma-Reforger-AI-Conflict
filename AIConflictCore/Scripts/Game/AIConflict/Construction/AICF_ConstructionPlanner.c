@@ -341,6 +341,11 @@ class AICF_ConstructionPlanner
 		array<bool> coverage = {};
 		for (int type; type < AICF_EConstructionType.COUNT; type++)
 			coverage.Insert(Covered(order, type) || now < state.m_aSearchRetryAt[type]);
+		// ZCR (21 Oct, Martin: "free guys should build much more"): one base of a side searches for its first
+		// depot at a time; the others build. In the watched matches every base searched 7-11 minutes for a
+		// depot site first and fortifications came at minute 21-24 of 30 (one a side a match).
+		if (!coverage[AICF_EConstructionType.LIGHT_DEPOT] && DepotUnderway(order.m_Faction, state))
+			coverage[AICF_EConstructionType.LIGHT_DEPOT] = true;
 		for (int attempt; attempt < AICF_EConstructionType.COUNT; attempt++)
 		{
 			// ZCR (20 Oct): while the side has no vehicle depot, every base with its barracks tries the light depot first
@@ -701,6 +706,20 @@ class AICF_ConstructionPlanner
 	// sites at crowded bases and the side's first depot came 10+ minutes late or never). Once the side has
 	// a depot, the old limits. -aicfFirstDepotOnce turns it off.
 	static const int FIRST_DEPOT_WINDOWS = 4;
+
+	// Another base of the faction has a light depot order going (searching or building).
+	protected bool DepotUnderway(Faction faction, AICF_ConstructionBaseState except)
+	{
+		if (!faction)
+			return false;
+		foreach (AICF_ConstructionBaseState other : m_aBases)
+		{
+			if (other && other != except && other.m_Order && other.m_Order.m_eType == AICF_EConstructionType.LIGHT_DEPOT &&
+				other.m_Order.m_Faction == faction)
+				return true;
+		}
+		return false;
+	}
 
 	protected bool FirstDepot(AICF_ConstructionOrder order)
 	{
