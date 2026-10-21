@@ -1502,13 +1502,19 @@ class AICF_MatchController
 	// the rest. Its per-tick budget (4 candidate sites, an 8 ms slice) is shared by every base's order, so a
 	// site search checked about one candidate a second: Arland's harbour main base got through 117 in a
 	// 2-minute window and the side's first depot came at game minute 15-27 in watched matches (3x - the
-	// planner runs on real time). -aicfConstructionTickMs N (250-1000; 1000 = as before).
+	// planner runs on real time). -aicfConstructionTickMs N (100-1000; 1000 = as before).
+	// Sped-up watched matches (-zcrSpeed 3, the lab's time multiplier) tick that much faster, at most every
+	// 100 ms: in w14 (3x, 250 ms) the depot searches still took 140-480 real seconds - 7-24 game minutes.
 	static int ConstructionTickMs()
 	{
 		string value;
 		if (System.GetCLIParam("aicfConstructionTickMs", value) && !value.IsEmpty())
-			return Math.ClampInt(value.ToInt(), 250, 1000);
-		return 250;
+			return Math.ClampInt(value.ToInt(), 100, 1000);
+		float speed = 1;
+		if (System.GetCLIParam("zcrSpeed", value) && !value.IsEmpty())
+			speed = Math.Max(1, value.ToFloat());
+		int ms = 250 / speed;
+		return Math.ClampInt(ms, 100, 1000);
 	}
 
 	protected void ConstructionTick()
