@@ -344,7 +344,10 @@ class AICF_ConstructionPlanner
 		// ZCR (21 Oct, Martin: "free guys should build much more"): one base of a side searches for its first
 		// depot at a time; the others build. In the watched matches every base searched 7-11 minutes for a
 		// depot site first and fortifications came at minute 21-24 of 30 (one a side a match).
-		if (!coverage[AICF_EConstructionType.LIGHT_DEPOT] && DepotUnderway(order.m_Faction, state))
+		// Only while the side has no depot at all (21 Oct 10:50: as first written it held every later depot
+		// back too - depots built a watched match fell from 2.3 to 1.2 and supply trucks with them).
+		order.m_eType = AICF_EConstructionType.LIGHT_DEPOT;
+		if (!coverage[AICF_EConstructionType.LIGHT_DEPOT] && FirstDepot(order) && DepotUnderway(order.m_Faction, state))
 			coverage[AICF_EConstructionType.LIGHT_DEPOT] = true;
 		for (int attempt; attempt < AICF_EConstructionType.COUNT; attempt++)
 		{
