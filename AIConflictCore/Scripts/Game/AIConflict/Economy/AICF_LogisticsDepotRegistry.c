@@ -114,6 +114,20 @@ class AICF_LogisticsDepotRegistry
 		}
 	}
 
+	// ZCR (21 Oct): the soldier drives (or rides with) a supply truck - the soldier layers leave him alone
+	// (their moves broke 77% of the game's own gate-opening chains: "native chain lost").
+	static bool AICF_IsTruckCrew(IEntity e)
+	{
+		if (!s_Current || !e)
+			return false;
+		foreach (AICF_LogisticsWorker w : s_Current.m_aWorkers)
+		{
+			if (w && w.m_Driver == e)
+				return true;
+		}
+		return false;
+	}
+
 	void Start(SCR_GameModeCampaign campaign)
 	{
 		s_Current = this;

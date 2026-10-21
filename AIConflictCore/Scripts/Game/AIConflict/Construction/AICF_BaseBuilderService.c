@@ -479,6 +479,19 @@ class AICF_BaseBuilderService
 		}
 	}
 
+	// ZCR (21 Oct): the soldier is one of the base builders (the soldier layers leave him alone).
+	static bool AICF_IsBuilder(IEntity e)
+	{
+		if (!s_Instance || !e)
+			return false;
+		foreach (AICF_BaseBuilder builder : s_Instance.m_aBuilders)
+		{
+			if (builder && builder.m_Character == e)
+				return true;
+		}
+		return false;
+	}
+
 	static AICF_BaseBuilder FindWorkingOnLayout(SCR_CampaignBuildingLayoutComponent layout)
 	{
 		if (!Replication.IsServer() || !s_Instance || s_Instance.m_bStopped || !layout)
