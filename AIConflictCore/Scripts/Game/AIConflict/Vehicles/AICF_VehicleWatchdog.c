@@ -884,7 +884,13 @@ class AICF_VehicleWatchdog
 				if (!occupantCharacter)
 					continue;
 
-				protectedOccupantCount++;
+				// ZCR (22 Oct, Martin: "cars blocking each other ... the biggest issue"): a dead body in a seat
+				// doesn't protect a vehicle from cleanup - it kept abandoned rides (the driver killed aboard) on
+				// the roads and pads all match (FOREIGN_OCCUPANT_POLL, then retained), and the cars behind them
+				// jammed. The living and the unconscious still protect it.
+				CharacterControllerComponent occupantLife = occupantCharacter.GetCharacterController();
+				if (!occupantLife || occupantLife.GetLifeState() != ECharacterLifeState.DEAD)
+					protectedOccupantCount++;
 				if (sampleCount < 8)
 				{
 					if (!samples.IsEmpty())
