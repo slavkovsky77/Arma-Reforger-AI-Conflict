@@ -79,7 +79,7 @@ class AICF_RoadMines
 	// in a walled checkpoint with Czech hedgehogs across the road east of the Airport (1332, 2360); AI
 	// drivers can't open it (AI Conflict's open-gate step failed, teleported the truck a few metres and it
 	// stuck again), and supply trucks waited there for minutes. A gate within 6 m of a road line, a
-	// hedgehog or barrier within 3 m. -aicfKeepRoadBlocks keeps them.
+	// hedgehog or barrier within 8 m (with the hedgehogs left the trucks still drove 4 km round the checkpoint). -aicfKeepRoadBlocks keeps them.
 	protected static void ClearRoadBlocks(BaseWorld world, RoadNetworkManager roads, vector mins, vector maxs)
 	{
 		if (System.IsCLIParam("aicfKeepRoadBlocks"))
@@ -95,9 +95,9 @@ class AICF_RoadMines
 			string name = Name(e);
 			bool gate = name.Contains("Gate");
 			vector road;
-			if (!AICF_LogisticsPlanner.NearestRoadPoint(roads, e.GetOrigin(), 6, road))
+			if (!AICF_LogisticsPlanner.NearestRoadPoint(roads, e.GetOrigin(), 8, road))
 				continue;
-			if (!gate && vector.DistanceXZ(road, e.GetOrigin()) > 3)
+			if (gate && vector.DistanceXZ(road, e.GetOrigin()) > 6)
 				continue;
 			vector at = e.GetOrigin();
 			AICF_Stage1Diagnostics.Info("ROAD_BLOCK_REMOVED", string.Format("x=%1 z=%2 road_m=%3 prefab=%4", Math.Round(at[0]), Math.Round(at[2]),
