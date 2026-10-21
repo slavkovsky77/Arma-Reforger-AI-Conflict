@@ -468,6 +468,7 @@ class AICF_MatchController
 		}
 
 		GetGame().GetCallqueue().CallLater(Update, UPDATE_INTERVAL_MS, true);
+		GetGame().GetCallqueue().CallLater(ConstructionTick, ConstructionTickMs(), true);
 		GetGame().GetCallqueue().CallLater(CommanderTick, m_Config.GetCommanderIntervalMs(), true);
 		GetGame().GetCallqueue().CallLater(ReliabilityTick, m_Stage2Config.GetReliabilityIntervalMs(), true);
 		GetGame().GetCallqueue().CallLater(Heartbeat, HEARTBEAT_INTERVAL_MS, true);
@@ -1497,6 +1498,25 @@ class AICF_MatchController
 		return true;
 	}
 
+	// ZCR (21 Oct): the construction planner on its own tick, every 250 ms instead of once a second with
+	// the rest. Its per-tick budget (4 candidate sites, an 8 ms slice) is shared by every base's order, so a
+	// site search checked about one candidate a second: Arland's harbour main base got through 117 in a
+	// 2-minute window and the side's first depot came at game minute 15-27 in watched matches (3x - the
+	// planner runs on real time). -aicfConstructionTickMs N (250-1000; 1000 = as before).
+	static int ConstructionTickMs()
+	{
+		string value;
+		if (System.GetCLIParam("aicfConstructionTickMs", value) && !value.IsEmpty())
+			return Math.ClampInt(value.ToInt(), 250, 1000);
+		return 250;
+	}
+
+	protected void ConstructionTick()
+	{
+		if ((m_bRosterReady || m_bInitialSpawnQueueSettled) && m_Construction)
+			m_Construction.Update();
+	}
+
 	protected void Update()
 	{
 		if (m_bStopped)
@@ -1566,8 +1586,6 @@ class AICF_MatchController
 		TryLogRosterReady();
 		if (m_ManagedObservers)
 			m_ManagedObservers.Update(m_USState, m_USSRState);
-		if ((m_bRosterReady || m_bInitialSpawnQueueSettled) && m_Construction)
-			m_Construction.Update();
 		if ((m_bRosterReady || m_bInitialSpawnQueueSettled) && m_BaseBuilders)
 			m_BaseBuilders.Update();
 		if (m_bRosterReady && m_FIAGarrisons)
@@ -7568,6 +7586,7 @@ class AICF_MatchController
 		}
 		ScriptCallQueue callqueue = GetGame().GetCallqueue();
 		callqueue.Remove(Update);
+		callqueue.Remove(ConstructionTick);
 		callqueue.Remove(CommanderTick);
 		callqueue.Remove(ReliabilityTick);
 		callqueue.Remove(Heartbeat);
