@@ -365,13 +365,16 @@ class AICF_ContentProfile
 			int apcEvery = ApcEvery();
 			if (apcEvery > 0 && rides % apcEvery == 0)
 			{
+				// The armour mods' IFVs first when they're loaded (lab --armour): M2A2 Bradley, BMP-1.
 				if (stableKey == "US")
 				{
+					suffixes.Insert("{24223D0679CDD612}Prefabs/Vehicles/Tracked/M2A2/M2A2_OD.et");
 					suffixes.Insert("Prefabs/Vehicles/Wheeled/Conflict_Variants/LAV25_Conflict.et");
 					suffixes.Insert("Prefabs/Vehicles/Wheeled/LAV25/LAV25.et");
 				}
 				else if (stableKey == "USSR")
 				{
+					suffixes.Insert("{1DC01AAACFFA8B63}Prefabs/Vehicles/Tracked/BMP1/BMP1_Base.et");
 					suffixes.Insert("Prefabs/Vehicles/Wheeled/Conflict_Variants/BTR70_Conflict.et");
 					suffixes.Insert("Prefabs/Vehicles/Wheeled/BTR70/BTR70.et");
 				}
@@ -435,8 +438,8 @@ class AICF_ContentProfile
 			hasPilot = true;
 			return kind != AICF_EVehicleKind.ARMED_LIGHT;
 		}
-		// ZCR: the APCs - a crew of driver and gunner, a squad in the back.
-		if (prefab.Contains("LAV25") || prefab.Contains("BTR70"))
+		// ZCR: the APCs and IFVs - a crew of driver and gunner, a squad in the back.
+		if (prefab.Contains("LAV25") || prefab.Contains("BTR70") || prefab.Contains("M2A2/M2A2_") || prefab.Contains("BMP1/BMP1_"))
 		{
 			accessibleSeats = 8;
 			hasPilot = true;

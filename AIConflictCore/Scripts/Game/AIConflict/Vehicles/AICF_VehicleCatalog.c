@@ -60,7 +60,18 @@ class AICF_VehicleCatalog
 		FactionKey stableKey = m_ContentProfile.GetStableFactionKey(faction.GetFactionKey());
 		m_ContentProfile.BuildVehicleSuffixPreference(stableKey, kind, suffixes);
 		foreach (string suffix : suffixes)
+		{
+			// ZCR (21 Oct): a full "{GUID}path" is a mod vehicle outside the faction's catalogue (the armour mods'
+			// Bradley / BMP-1) - taken as it is when its mod is loaded, skipped quietly when not.
+			if (suffix.StartsWith("{"))
+			{
+				Resource direct = Resource.Load(suffix);
+				if (direct && direct.IsValid() && !candidates.Contains(suffix))
+					candidates.Insert(suffix);
+				continue;
+			}
 			AppendCatalogMatch(entries, suffix, candidates);
+		}
 
 		for (int candidateIndex = candidates.Count() - 1; candidateIndex >= 0; candidateIndex--)
 		{
