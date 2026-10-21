@@ -340,6 +340,16 @@ class AICF_ContentProfile
 		}
 	}
 
+	protected static ref map<string, int> s_mArmedRides = new map<string, int>();
+
+	static int ApcEvery()
+	{
+		string value;
+		if (System.GetCLIParam("aicfApcEvery", value) && !value.IsEmpty())
+			return Math.ClampInt(value.ToInt(), 0, 20);
+		return 2;
+	}
+
 	void BuildVehicleSuffixPreference(
 		FactionKey stableKey,
 		AICF_EVehicleKind kind,
@@ -347,6 +357,25 @@ class AICF_ContentProfile
 	{
 		if (kind == AICF_EVehicleKind.ARMED_LIGHT)
 		{
+			// ZCR (21 Oct, Martin: "more types of vehicles - APCs, tanks - and use them for combat too"):
+			// every 2nd armed ride is an APC - the LAV-25 (25 mm) or the BTR-70 (14.5 mm), a squad aboard and
+			// the gunner fighting. -aicfApcEvery N (0 off).
+			int rides = s_mArmedRides.Get(stableKey) + 1;     // per side: the two sides' rides alternate
+			s_mArmedRides.Set(stableKey, rides);
+			int apcEvery = ApcEvery();
+			if (apcEvery > 0 && rides % apcEvery == 0)
+			{
+				if (stableKey == "US")
+				{
+					suffixes.Insert("Prefabs/Vehicles/Wheeled/Conflict_Variants/LAV25_Conflict.et");
+					suffixes.Insert("Prefabs/Vehicles/Wheeled/LAV25/LAV25.et");
+				}
+				else if (stableKey == "USSR")
+				{
+					suffixes.Insert("Prefabs/Vehicles/Wheeled/Conflict_Variants/BTR70_Conflict.et");
+					suffixes.Insert("Prefabs/Vehicles/Wheeled/BTR70/BTR70.et");
+				}
+			}
 			if (stableKey == "US")
 			{
 				suffixes.Insert("Prefabs/Vehicles/Wheeled/Conflict_Variants/M1025_armed_M2HB_Conflict.et");
@@ -405,6 +434,14 @@ class AICF_ContentProfile
 			accessibleSeats = 4;
 			hasPilot = true;
 			return kind != AICF_EVehicleKind.ARMED_LIGHT;
+		}
+		// ZCR: the APCs - a crew of driver and gunner, a squad in the back.
+		if (prefab.Contains("LAV25") || prefab.Contains("BTR70"))
+		{
+			accessibleSeats = 8;
+			hasPilot = true;
+			hasTurret = true;
+			return kind == AICF_EVehicleKind.ARMED_LIGHT;
 		}
 		if (prefab.Contains("M1025_armed_M2HB") ||
 			prefab.Contains("UAZ469_PKM.et") ||

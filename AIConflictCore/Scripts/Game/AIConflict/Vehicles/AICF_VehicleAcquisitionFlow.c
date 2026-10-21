@@ -1879,7 +1879,7 @@ class AICF_VehicleAcquisitionFlow
 		string value;
 		if (System.GetCLIParam("aicfArmedRideEvery", value) && !value.IsEmpty())
 			return Math.ClampInt(value.ToInt(), 0, 20);
-		return 3;
+		return 2;     // ZCR 21 Oct: every 2nd ride armed (was 3rd), half of those APCs - Martin: "more types of vehicles, for combat too"
 	}
 
 	protected bool TryResolveVehicleKind(
