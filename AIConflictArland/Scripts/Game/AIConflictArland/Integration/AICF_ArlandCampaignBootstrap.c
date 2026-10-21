@@ -96,6 +96,10 @@ modded class SCR_GameModeCampaign
 			return "Arland";
 		if (worldFile.Contains("CTI_Campaign_Eden"))
 			return "Everon";
+		// ZCR (21 Oct): SpearHead's Yunakivka Conflict scenarios (SH UHC Yunakivka, Yuna Expanded, Rebirth) -
+		// stock Conflict with US/USSR/FIA (Martin: "test it on Yunakivka, it has a lot of trenches").
+		if (worldFile.Contains("Yuna"))
+			return "Yunakivka";
 
 		return string.Empty;
 	}
