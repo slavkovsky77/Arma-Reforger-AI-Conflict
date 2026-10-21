@@ -314,6 +314,8 @@ class AICF_VehicleAcquisitionFlow
 		{
 			if (!selection || !selection.m_bRetryable)
 				return EndRequest(trip, fleet, requestState, "SITE_PREFLIGHT_TERMINAL", nowMs);
+			if (PadWaitOver(requestState, nowMs))
+				return EndRequest(trip, fleet, requestState, "SITE_WAIT_LIMIT", nowMs);
 			int nextProbeAtMs = nowMs + m_Config.GetWaitProbeIntervalMs();
 			requestState.ClearNoRangeObservation();
 			requestState.EnterWaitingForSite(nowMs, nextProbeAtMs, selection.m_sFailureReason);
@@ -342,6 +344,8 @@ class AICF_VehicleAcquisitionFlow
 			// A reserved pad is a short-lived queue condition. Recheck it on the
 			// regular retry cadence instead of leaving the squad idle for the full
 			// no-site probe interval.
+			if (PadWaitOver(requestState, nowMs))
+				return EndRequest(trip, fleet, requestState, "SITE_WAIT_LIMIT", nowMs);
 			int reservedProbeAtMs = nowMs + m_Config.GetRetryIntervalMs();
 			requestState.EnterWaitingForSite(
 				nowMs,
@@ -1761,6 +1765,37 @@ class AICF_VehicleAcquisitionFlow
 			"ENTER_WAITING_FOR_SITE:" + reason,
 			BuildCausationId(trip, requestState, "ENTER_WAIT"),
 			nextProbeAtMs);
+	}
+
+	// ZCR (21 Oct): a squad waits at most 45 game seconds for a free vehicle pad, then goes on foot. It
+	// waited until the whole trip's deadline (10-30 minutes): watched matches had 8-15 squads a side
+	// wait over a real minute (3 game minutes at 3x), up to 594 s, and the side at Arland's cramped
+	// harbour main base kept 42-68% of its soldiers there at minute 10 (the screen check's limit is
+	// 40%; the north base ~26%). Real milliseconds, so divided by the lab's speed-up (-zcrSpeed);
+	// -aicfPadWaitMs N sets it (0: no limit, as before). Ends as SITE_WAIT_LIMIT.
+	protected static int s_iPadWaitMs = -1;
+	static int PadWaitLimitMs()
+	{
+		if (s_iPadWaitMs >= 0)
+			return s_iPadWaitMs;
+		string value;
+		if (System.GetCLIParam("aicfPadWaitMs", value) && !value.IsEmpty())
+		{
+			s_iPadWaitMs = Math.Max(0, value.ToInt());
+			return s_iPadWaitMs;
+		}
+		float speed = 1;
+		if (System.GetCLIParam("zcrSpeed", value) && !value.IsEmpty())
+			speed = Math.Max(1, value.ToFloat());
+		s_iPadWaitMs = 45000 / speed;
+		return s_iPadWaitMs;
+	}
+
+	protected bool PadWaitOver(AICF_VehicleRequestState requestState, int nowMs)
+	{
+		int limit = PadWaitLimitMs();
+		int started = requestState.GetWaitingStartedAtMs();
+		return limit > 0 && started > 0 && nowMs - started >= limit;
 	}
 
 	protected AICF_TripOutcome EndRequest(
