@@ -18,6 +18,17 @@ class AICF_ConstructionConfig
 	void AICF_ConstructionConfig()
 	{
 		string value;
+		// ZCR (21 Oct): the planner's windows, decisions and cooldowns run on real time. In the lab's sped-up
+		// watched matches (-zcrSpeed 3) they are that much shorter, so they last as long in game time as in a
+		// normal match: at 3x a small barracks searched its 2-minute window - 6 game minutes - and found no
+		// site, then the forced fallback found one in 13 s (w17), and every depot waited for it.
+		// Explicit -aicfConstruction*Ms options still win.
+		float speed = 1;
+		if (System.GetCLIParam("zcrSpeed", value) && !value.IsEmpty())
+			speed = Math.Max(1, value.ToFloat());
+		m_iDecisionMs = 60000 / speed;
+		m_iCooldownMs = 60000 / speed;
+		m_iDeadlineMs = 120000 / speed;
 		if (System.GetCLIParam("aicfConstructionDecisionMs", value))
 			m_iDecisionMs = Math.ClampInt(value.ToInt(), 60000, 3600000);
 		if (System.GetCLIParam("aicfConstructionCooldownMs", value))
