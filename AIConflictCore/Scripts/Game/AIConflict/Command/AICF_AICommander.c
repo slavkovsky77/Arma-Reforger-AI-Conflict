@@ -65,11 +65,42 @@ class AICF_AICommander
 		return -1;
 	}
 
+	// ZCR (21 Oct): building's navmesh queries go through an empty group of their own at the main base, which
+	// nobody fights. Borrowed from the side's first living squad, the context changed whenever that squad was
+	// wiped out, and every building order in progress was cancelled and searched again
+	// (NAVMESH_CONTEXT_CHANGED: 1-2 fortifications a watched match, and a first depot in a headless test).
+	// -aicfBorrowedPathfinding: borrowed, as before. Logs CONSTRUCTION_PATH_GROUP.
+	protected SCR_AIGroup m_PathGroup;
+	protected int m_iPathGroupTries;
+
 	// Read-only infantry navmesh context; не создаёт group/worker или assignment.
 	AIPathfindingComponent GetConstructionPathfinding()
 	{
 		if (!IsEnabled())
 			return null;
+		if (!m_PathGroup && m_iPathGroupTries < 3 && m_Faction && m_Faction.GetMainBase() && !System.IsCLIParam("aicfBorrowedPathfinding"))
+		{
+			m_iPathGroupTries++;
+			Resource res = Resource.Load("{000CD338713F2B5A}Prefabs/AI/Groups/Group_Base.et");
+			if (res && res.IsValid())
+			{
+				EntitySpawnParams params = new EntitySpawnParams();
+				params.TransformMode = ETransformMode.WORLD;
+				params.Transform[3] = m_Faction.GetMainBase().GetOwner().GetOrigin();
+				m_PathGroup = SCR_AIGroup.Cast(GetGame().SpawnEntityPrefab(res, GetGame().GetWorld(), params));
+			}
+			AIPathfindingComponent made;
+			if (m_PathGroup)
+				made = AIPathfindingComponent.Cast(m_PathGroup.FindComponent(AIPathfindingComponent));
+			AICF_Stage1Diagnostics.Info("CONSTRUCTION_PATH_GROUP", string.Format("faction=%1 spawned=%2 navmesh=%3 try=%4", m_sFactionKey,
+				m_PathGroup != null, made && made.GetNavmeshComponent(), m_iPathGroupTries));
+		}
+		if (m_PathGroup)
+		{
+			AIPathfindingComponent own = AIPathfindingComponent.Cast(m_PathGroup.FindComponent(AIPathfindingComponent));
+			if (own && own.GetNavmeshComponent())
+				return own;
+		}
 		for (int i; i < AICF_Stage1Config.GROUP_SLOTS_PER_FACTION; i++)
 		{
 			AICF_GroupSlot slot = m_FactionState.GetSlot(i);
