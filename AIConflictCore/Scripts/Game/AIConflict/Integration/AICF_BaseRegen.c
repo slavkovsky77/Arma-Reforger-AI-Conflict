@@ -4,7 +4,9 @@
 // container the base's stock is summed from regains 100 every few seconds (resource gain from the base's
 // encapsulator config), about 570 a minute. Non-HQ bases now get no free supplies - the gain is switched off
 // every 5 s (the encapsulator can rebuild the container) - so they live on supply trucks; HQs and AI
-// Conflict's supply depots keep theirs. Conflict's own regular income past a threshold is off too.
+// Conflict's supply depots keep theirs. (Conflict's replenish threshold is left alone: AI Conflict's
+// recruitment reads it as a base's ceiling - set to 0, front bases looked unable to recruit and two watched
+// matches failed their first spawns, 21 Oct 13:00-13:13.)
 // Logs BASE_REGEN_OFF (bases and containers switched off, once a minute when it changes something).
 // -aicfBaseRegen keeps the free refill.
 class AICF_BaseRegen
@@ -62,16 +64,5 @@ class AICF_BaseRegen
 			s_iNextLog = now + 60000;
 			AICF_Stage1Diagnostics.Info("BASE_REGEN_OFF", string.Format("containers_switched=%1 total=%2", switched, s_iSwitched));
 		}
-	}
-}
-
-modded class SCR_GameModeCampaign
-{
-	// Conflict's own regular income for non-HQ bases fills only up to this threshold: none.
-	override int GetSuppliesReplenishThreshold()
-	{
-		if (System.IsCLIParam("aicfBaseRegen"))
-			return super.GetSuppliesReplenishThreshold();
-		return 0;
 	}
 }
