@@ -65,23 +65,34 @@ class AICF_InfantryApproachRoute
 		float progress = fromOrigin[0] * direction[0] + fromOrigin[2] * direction[2];
 		if (progress >= length - 250.0)
 			return false;
-		float nextProgress = Math.Min(length - 180.0, Math.Max(0, progress) + 220.0);
+		float nextProgress = Math.Min(length - 180.0, Math.Max(0, progress) + StepM());
 		vector lateral = Vector(-direction[2], 0, direction[0]);
 		float offset = GetLaneOffset(numericSlot);
 		float maxOffset = Math.Min(200.0, length * 0.2);
 		offset = Math.Clamp(offset, -maxOffset, maxOffset);
 		candidate = m_vOrigin + direction * nextProgress + lateral * offset;
-		candidate = TowardCover(candidate, direction, lateral);
+		candidate = TowardCover(candidate, direction, lateral, leaderPosition);
 		return vector.DistanceXZ(candidate, objective) + 40.0 < vector.DistanceXZ(leaderPosition, objective);
 	}
 
 	// ZCR, 19 Oct (Martin: "they just walk to the points through no cover"): each step of the march
-	// ends at the best cover within 60 m of its lane point - under trees or a roof, beside a building,
+	// ends at the best cover near its lane point - under trees or a roof, beside a building,
 	// a wall or a rock - so a team goes from tree line to tree line instead of stopping in a field.
 	// No cover there: the lane point as before.
+	// 21 Oct (Martin's /bad: "us team a8 is exposed as hell" - A8 crossed an open hillside on a 220-m leg): legs of
+	// StepM() (150 m, -aicfApproachStepM), end points searched 105 m to either side, and scored by the cover there
+	// (x3) plus how much of the way to it runs under trees or a roof (4 points on the line from the leader).
 	protected static ref TraceParam s_CoverTrace;
 
-	protected vector TowardCover(vector point, vector direction, vector lateral)
+	static float StepM()
+	{
+		string value;
+		if (System.GetCLIParam("aicfApproachStepM", value) && !value.IsEmpty())
+			return Math.Clamp(value.ToFloat(), 80, 300);
+		return 150;
+	}
+
+	protected vector TowardCover(vector point, vector direction, vector lateral, vector leader)
 	{
 		BaseWorld world = GetGame().GetWorld();
 		if (!world)
@@ -89,8 +100,8 @@ class AICF_InfantryApproachRoute
 		vector best = point;
 		int bestScore = 0;
 		float bestDistance = 1e9;
-		array<float> along = {0, -40, 40};
-		array<float> across = {0, -30, 30, -60, 60};
+		array<float> along = {0, -30, 30};
+		array<float> across = {0, -35, 35, -70, 70, -105, 105};
 		foreach (float a : along)
 		{
 			foreach (float b : across)
@@ -102,7 +113,7 @@ class AICF_InfantryApproachRoute
 				// ZCR: never into the side's own kill zone (AICF_DangerZones).
 				if (!m_sSide.IsEmpty() && AICF_DangerZones.Near(p, m_sSide))
 					continue;
-				int score = CoverScore(world, p);
+				int score = CoverScore(world, p) * 3 + RouteCover(world, leader, p);
 				float d = vector.DistanceXZ(p, point);
 				if (score > bestScore || (score == bestScore && score > 0 && d < bestDistance))
 				{
@@ -125,9 +136,30 @@ class AICF_InfantryApproachRoute
 		return best;
 	}
 
+	// How many of 4 points on the way from the leader to p have something overhead (a tree crown, a roof).
+	protected static int RouteCover(BaseWorld world, vector from, vector to)
+	{
+		if (!s_CoverTrace)
+			s_CoverTrace = new TraceParam();
+		s_CoverTrace.Flags = TraceFlags.ENTS | TraceFlags.WORLD;
+		s_CoverTrace.TargetLayers = EPhysicsLayerDefs.ViewGeometry | EPhysicsLayerDefs.Foliage | EPhysicsLayerDefs.FireGeometry;
+		s_CoverTrace.Exclude = null;
+		int covered;
+		for (int i = 1; i <= 4; i++)
+		{
+			vector q = from + (to - from) * (i * 0.2);
+			q[1] = world.GetSurfaceY(q[0], q[2]);
+			s_CoverTrace.Start = q + "0 1.5 0";
+			s_CoverTrace.End = q + "0 16 0";
+			if (world.TraceMove(s_CoverTrace, null) < 1.0)
+				covered++;
+		}
+		return covered;
+	}
+
 	// 2 for something overhead (a tree crown, a roof), 1 for something solid within 5 m around at
 	// chest height on at least two sides (a building, a wall, rocks, trunks, a crest).
-	protected static int CoverScore(BaseWorld world, vector p)
+	static int CoverScore(BaseWorld world, vector p)
 	{
 		if (!s_CoverTrace)
 			s_CoverTrace = new TraceParam();

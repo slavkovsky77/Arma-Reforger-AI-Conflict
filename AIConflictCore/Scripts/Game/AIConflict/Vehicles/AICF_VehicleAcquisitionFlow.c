@@ -1570,7 +1570,10 @@ class AICF_VehicleAcquisitionFlow
 			direction * effectiveOffsetMeters;
 		BaseWorld world = GetGame().GetWorld();
 		if (world)
+		{
 			stagingPosition[1] = world.GetSurfaceY(stagingPosition[0], stagingPosition[2]);
+			stagingPosition = CoveredStaging(world, spawnPosition, direction, effectiveOffsetMeters, stagingPosition);
+		}
 		AIPathfindingComponent pathfinding;
 		if (group)
 			pathfinding = AIPathfindingComponent.Cast(group.FindComponent(AIPathfindingComponent));
@@ -1584,6 +1587,42 @@ class AICF_VehicleAcquisitionFlow
 			stagingPosition = navmeshPosition;
 		}
 		return stagingPosition;
+	}
+
+	// ZCR (21 Oct, Martin's /bad: "soviet team a0 is a bit exposed ... they could be in a safer place" - A0 waited for its
+	// ride in open grass): the team waits where there is cover near its side of the pad - turned up to 90 degrees from
+	// the way to the team, the same distance or up to 30 m farther, scored by AICF_InfantryApproachRoute.CoverScore
+	// (overhead 2, solid on two sides 1), the team's side first. No cover there: the spot as before.
+	protected static vector CoveredStaging(BaseWorld world, vector pad, vector direction, float offset, vector fallback)
+	{
+		if (System.IsCLIParam("aicfOpenStaging"))
+			return fallback;
+		vector best = fallback;
+		int bestScore = AICF_InfantryApproachRoute.CoverScore(world, fallback) * 10;
+		array<float> turns = {0, 30, -30, 60, -60, 90, -90};
+		array<float> farther = {0, 15, 30};
+		foreach (int ti, float turn : turns)
+		{
+			float r = turn * Math.DEG2RAD;
+			vector way = Vector(direction[0] * Math.Cos(r) - direction[2] * Math.Sin(r), 0, direction[0] * Math.Sin(r) + direction[2] * Math.Cos(r));
+			foreach (float extra : farther)
+			{
+				vector p = pad + way * (offset + extra);
+				p[1] = world.GetSurfaceY(p[0], p[2]);
+				if (ChimeraWorldUtils.TryGetWaterSurfaceSimple(world, p - "0 0.5 0"))
+					continue;
+				int cover = AICF_InfantryApproachRoute.CoverScore(world, p);
+				if (cover == 0)
+					continue;
+				int score = cover * 10 - ti;
+				if (score > bestScore)
+				{
+					best = p;
+					bestScore = score;
+				}
+			}
+		}
+		return best;
 	}
 
 	protected bool IsApproachWaypointQueued(

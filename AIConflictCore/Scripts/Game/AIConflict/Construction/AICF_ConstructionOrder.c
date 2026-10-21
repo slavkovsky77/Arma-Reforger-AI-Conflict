@@ -43,6 +43,10 @@ class AICF_ConstructionOrder
 	bool m_bTerrainLiveChecked;
 	ref array<vector> m_aPathStarts = {};
 	ref array<vector> m_aSpawnSeeds = {};
+	// ZCR: depot spots beside the base's roads, tried first (AICF_ConstructionSiteSearch.RoadSeed).
+	ref array<vector> m_aRoadSeeds;
+	ref array<float> m_aRoadSeedYaws;
+	int m_iRoadTries;
 	AIPathfindingComponent m_PathContext;
 	bool m_bPathContextSet;
 	ref AICF_ConstructionNavigation m_Navigation = new AICF_ConstructionNavigation();

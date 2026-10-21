@@ -179,19 +179,32 @@ class AICF_ConstructionSiteSearch
 	bool BeginCandidate(AICF_ConstructionOrder order)
 	{
 		order.m_iQueryPhase = 0;
-		int attempt = order.m_iSearchOffset + order.m_iAttempts++;
-		attempt = CandidateTransformIndex(attempt);
-		order.m_iCandidateIndex = attempt;
 		order.m_iCandidateStartedAt = System.GetTickCount();
 		float extent = vector.DistanceXZ(order.m_Metadata.m_vMin, order.m_Metadata.m_vMax) * 0.5 + m_Config.m_fMargin;
 		float outer = order.m_Provider.GetBuildingRadius();
-		vector offset = CandidateOffset(attempt, extent, outer, order.m_fYaw);
-		Math3D.AnglesToMatrix(Vector(order.m_fYaw, 0, 0), order.m_aTransform);
 		vector searchCenter = order.m_vProviderPosition;
+		vector offset;
+		vector roadSpot;
+		float roadYaw;
+		int attempt = -1;
+		if (RoadSeed(order, extent, outer, roadSpot, roadYaw))
+		{
+			order.m_iCandidateIndex = -order.m_iRoadTries;
+			order.m_fYaw = roadYaw;
+			searchCenter = roadSpot;
+		}
+		else
+		{
+			attempt = order.m_iSearchOffset + order.m_iAttempts++;
+			attempt = CandidateTransformIndex(attempt);
+			order.m_iCandidateIndex = attempt;
+			offset = CandidateOffset(attempt, extent, outer, order.m_fYaw);
+		}
+		Math3D.AnglesToMatrix(Vector(order.m_fYaw, 0, 0), order.m_aTransform);
 		// Первые центры рядом с реальным stock spawn: короткий подход обычно
 		// дешевле обхода всей базы. Это лишь порядок; далее покрывается весь
 		// provider radius, включая центр и внешнюю полосу допустимых углов.
-		if (attempt / 8 < 4 && order.m_Base.GetSpawnPoint())
+		if (attempt >= 0 && attempt / 8 < 4 && order.m_Base.GetSpawnPoint())
 		{
 			if (!order.m_bPathStartSampled)
 			{
@@ -236,6 +249,84 @@ class AICF_ConstructionSiteSearch
 		return true;
 	}
 
+	// ZCR (21 Oct): a depot needs a road beside it (DepotRoadsOk), but its candidates came from a disk round the
+	// base: a third of the rejections of the depot searches that gave up were DEPOT_FAR_FROM_ROAD (light depots 72% of
+	// searches gave up). The first order of a depot type at a base tries spots beside the base's roads first: every 15 m
+	// along each road inside the build radius, half the road's width + 2 m + the footprint's half-diagonal to either
+	// side, along the road and across it (4 headings), up to ROAD_TRIES; spread over the base. Off: -aicfDepotAnyRoad.
+	static const int ROAD_TRIES = 96;
+	static const float SLOT_LANE_M = 12;
+
+	protected bool RoadSeed(AICF_ConstructionOrder order, float extent, float outer, out vector spot, out float yaw)
+	{
+		if (order.m_eType != AICF_EConstructionType.LIGHT_DEPOT && order.m_eType != AICF_EConstructionType.HEAVY_DEPOT)
+			return false;
+		if (order.m_iSearchOffset > 0 || order.m_iRoadTries >= ROAD_TRIES || System.IsCLIParam("aicfDepotAnyRoad"))
+			return false;
+		if (!order.m_aRoadSeeds)
+			BuildRoadSeeds(order, extent, outer);
+		int count = order.m_aRoadSeeds.Count();
+		int sample = order.m_iRoadTries / 4;
+		if (sample >= count)
+			return false;
+		// Spread over the base: a stride coprime with the count, not the order the roads came in.
+		int stride = 97;
+		if (count % 97 == 0)
+			stride = 89;
+		int index = (sample * stride) % count;
+		spot = order.m_aRoadSeeds[index];
+		int quarter = order.m_iRoadTries % 4;
+		yaw = order.m_aRoadSeedYaws[index] + quarter * 90;
+		order.m_iRoadTries++;
+		return true;
+	}
+
+	protected void BuildRoadSeeds(AICF_ConstructionOrder order, float extent, float outer)
+	{
+		order.m_aRoadSeeds = {};
+		order.m_aRoadSeedYaws = {};
+		ChimeraAIWorld aiWorld = ChimeraAIWorld.Cast(GetGame().GetAIWorld());
+		if (!aiWorld || !aiWorld.GetRoadNetworkManager())
+			return;
+		vector center = order.m_vProviderPosition;
+		float inside = outer - extent;
+		if (inside <= 0)
+			return;
+		array<BaseRoad> roads = {};
+		aiWorld.GetRoadNetworkManager().GetRoadsInAABB(center - Vector(outer, 60, outer), center + Vector(outer, 60, outer), roads);
+		foreach (BaseRoad road : roads)
+		{
+			array<vector> points = {};
+			road.GetPoints(points);
+			float away = road.GetWidth() * 0.5 + 2 + extent;
+			for (int i = 1; i < points.Count() && order.m_aRoadSeeds.Count() < 400; i++)
+			{
+				vector from = points[i - 1];
+				vector dir = points[i] - from;
+				dir[1] = 0;
+				float length = dir.Length();
+				if (length < 0.5)
+					continue;
+				dir = dir * (1 / length);
+				vector across = Vector(dir[2], 0, -dir[0]);
+				float roadYaw = Math.Atan2(dir[0], dir[2]) * Math.RAD2DEG;
+				for (float along = 0; along < length; along += 15)
+				{
+					vector at = from + dir * along;
+					for (int sideOf = -1; sideOf <= 1; sideOf += 2)
+					{
+						vector seed = at + across * (away * sideOf);
+						if (vector.DistanceXZ(seed, center) > inside)
+							continue;
+						order.m_aRoadSeeds.Insert(seed);
+						order.m_aRoadSeedYaws.Insert(roadYaw);
+					}
+				}
+			}
+		}
+		order.Log("CONSTRUCTION_ROAD_SEEDS", string.Format("seeds=%1 roads=%2 tries=%3", order.m_aRoadSeeds.Count(), roads.Count(), ROAD_TRIES));
+	}
+
 	static int CandidateTransformIndex(int attempt)
 	{
 		// Те же 32 центра x 8 поворотов за 256 attempts. Сначала проверяем
@@ -257,9 +348,11 @@ class AICF_ConstructionSiteSearch
 		yaw = orientation * 45;
 		float radial = RadicalInverse(sample + 1, 2);
 		float angle = RadicalInverse(sample + 1, 3) * Math.PI2;
-		float radiusLimit = outer;
+		// ZCR (21 Oct): centres no farther than the footprint fits - 13-28% of the tries of the searches that gave up
+		// had a corner outside the provider radius (OUTSIDE_BUILDING_OR_WORLD_BOUNDS) and were lost before any check.
+		float radiusLimit = Math.Max(0, outer - extent);
 		if (sample < 4)
-			radiusLimit = Math.Min(outer, extent * 3);
+			radiusLimit = Math.Min(radiusLimit, extent * 3);
 		float radius = Math.Sqrt(radial) * radiusLimit;
 		return Vector(Math.Sin(angle) * radius, 0, Math.Cos(angle) * radius);
 	}
@@ -1031,7 +1124,11 @@ class AICF_ConstructionSiteSearch
 				vector transform[4];
 				entity.GetWorldTransform(transform);
 				vector mins, maxs;
-				TransformBounds(data.GetMinBoundsVector(), data.GetMaxBoundsVector(), transform, 0, mins, maxs);
+				// ZCR (21 Oct, Martin's /bad "soviet, supply depot is put in front of the vehicles"): the slot's lane
+				// stays clear too - SLOT_LANE_M in front of the slot (vehicles leave it forward), not only the slot.
+				vector laneMax = data.GetMaxBoundsVector();
+				laneMax[2] = laneMax[2] + SLOT_LANE_M;
+				TransformBounds(data.GetMinBoundsVector(), laneMax, transform, 0, mins, maxs);
 				blocked = blocked || (mins[0] <= m_vQueryMax[0] && maxs[0] >= m_vQueryMin[0] && mins[2] <= m_vQueryMax[2] && maxs[2] >= m_vQueryMin[2]);
 			}
 		}
