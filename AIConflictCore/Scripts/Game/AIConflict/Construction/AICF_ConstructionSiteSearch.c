@@ -254,14 +254,17 @@ class AICF_ConstructionSiteSearch
 	// searches gave up). The first order of a depot type at a base tries spots beside the base's roads first: every 15 m
 	// along each road inside the build radius, half the road's width + 2 m + the footprint's half-diagonal to either
 	// side, along the road and across it (4 headings), up to ROAD_TRIES; spread over the base. Off: -aicfDepotAnyRoad.
-	static const int ROAD_TRIES = 96;
+	static const int ROAD_TRIES = 160;
 	static const float SLOT_LANE_M = 12;
 
 	protected bool RoadSeed(AICF_ConstructionOrder order, float extent, float outer, out vector spot, out float yaw)
 	{
 		if (order.m_eType != AICF_EConstructionType.LIGHT_DEPOT && order.m_eType != AICF_EConstructionType.HEAVY_DEPOT)
 			return false;
-		if (order.m_iSearchOffset > 0 || order.m_iRoadTries >= ROAD_TRIES || System.IsCLIParam("aicfDepotAnyRoad"))
+		// 22 Oct night: every order, not only the first - the retries went back to random spots and 39% of their
+		// rejections were DEPOT_FAR_FROM_ROAD (light depots: 147 searches gave up, 79 placed). A retry starts further
+		// along the roadside list (by the search offset the failed ones left).
+		if (order.m_iRoadTries >= ROAD_TRIES || System.IsCLIParam("aicfDepotAnyRoad"))
 			return false;
 		if (!order.m_aRoadSeeds)
 			BuildRoadSeeds(order, extent, outer);
@@ -273,7 +276,8 @@ class AICF_ConstructionSiteSearch
 		int stride = 97;
 		if (count % 97 == 0)
 			stride = 89;
-		int index = (sample * stride) % count;
+		int start = order.m_iSearchOffset / 8;
+		int index = ((start + sample) * stride) % count;
 		spot = order.m_aRoadSeeds[index];
 		int quarter = order.m_iRoadTries % 4;
 		yaw = order.m_aRoadSeedYaws[index] + quarter * 90;
