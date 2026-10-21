@@ -20,6 +20,8 @@ modded class SCR_GameModeCampaign
 		m_sAICFMapKey = AICF_ResolveSupportedMapKey();
 		if (m_sAICFMapKey.IsEmpty())
 			return;
+		if (Replication.IsServer())
+			AICF_RadioRange.Extend(m_sAICFMapKey);
 
 		string peerRole = "client";
 		if (Replication.IsServer())
