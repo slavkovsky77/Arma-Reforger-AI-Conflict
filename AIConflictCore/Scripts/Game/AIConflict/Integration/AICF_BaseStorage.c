@@ -38,9 +38,16 @@ class AICF_BaseStorage
 				AICF_Stage1Diagnostics.Info("BASE_STORAGE_FAILED", string.Format("base=%1 reason=NO_CLEAR_SPOT", base.GetOwner().GetID()));
 				continue;
 			}
-			ResourceName prefab = "{94D9E9B690F98756}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_SupplyCache_S_US_01.et";
-			if (base.GetFaction() && base.GetFaction().GetFactionKey() == "USSR")
-				prefab = "{EB63BCC0AA844B17}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_SupplyCache_S_USSR_01.et";
+			// The campaign's neutral cache (the one SpearHead's supply layer uses for its remnant depots): with a
+			// side's cache, the other side's trucks were refused (RESOURCE_OPERATION_UNSUPPORTED_OR_REJECTED)
+			// once the base changed hands. -aicfFactionBaseStorage: the owner's Conflict cache.
+			ResourceName prefab = "{47789BA6E9CA2928}Prefabs/MP/Campaign/SupplyDepots/SupplyCache_S_FIA_03_Campaign.et";
+			if (System.IsCLIParam("aicfFactionBaseStorage"))
+			{
+				prefab = "{94D9E9B690F98756}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_SupplyCache_S_US_01.et";
+				if (base.GetFaction() && base.GetFaction().GetFactionKey() == "USSR")
+					prefab = "{EB63BCC0AA844B17}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_SupplyCache_S_USSR_01.et";
+			}
 			Resource res = Resource.Load(prefab);
 			if (!res || !res.IsValid())
 				continue;
