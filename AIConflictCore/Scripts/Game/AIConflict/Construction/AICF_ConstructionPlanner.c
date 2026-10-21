@@ -46,6 +46,19 @@ class AICF_ConstructionPlanner
 		}
 	}
 
+	// The same orders' tokens, in the same order (ZCR's efforts count how many tries a site search took).
+	static void AICF_OrderTokens(FactionKey side, notnull array<string> tokens)
+	{
+		if (!s_Instance)
+			return;
+		foreach (AICF_ConstructionBaseState state : s_Instance.m_aBases)
+		{
+			if (!state || !state.m_Order || state.m_Order.m_sFaction != side || !state.m_Base)
+				continue;
+			tokens.Insert(state.m_Order.m_sToken);
+		}
+	}
+
 	void Start(SCR_GameModeCampaign campaign, AICF_BaseBuilderService builders, AICF_EconomySystem economy, AICF_AICommander us, AICF_AICommander ussr)
 	{
 		if (!Replication.IsServer() || !campaign || !campaign.IsMaster())
