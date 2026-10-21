@@ -300,6 +300,7 @@ class AICF_MatchController
 		m_Logistics = new AICF_LogisticsService(m_Campaign, m_VehicleCoordinator, m_ObjectiveGraph, m_LogisticsConfig, m_EconomySystem);
 		AICF_RoadMines.Start();     // ZCR: the world's minefields across roads off the map (-aicfKeepRoadMines)
 		AICF_SupplyDepots.Start();  // ZCR: the bases nearest the middle become supply depots (-aicfSupplyDepots N)
+		AICF_BaseStorage.Start();   // ZCR: a supply cache at bases without supply storage (-aicfNoBaseStorage)
 		Subscribe();
 
 		string expectedPlayerFaction = m_Config.GetExpectedPlayerFaction();
