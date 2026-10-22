@@ -114,6 +114,32 @@ class AICF_LogisticsService
 
 	// The automatic scheduler as it was before manual dispatch (upstream 2a00451^): spawn a truck for a
 	// depot with work, load where supplies are spare, deliver where they are short, return home.
+	// ZCR (22 Oct): at most this many supply trucks of a side out at once (-aicfLogisticsSideTrucks N, 0: no limit).
+	// Everon, once its searches finished: 52 truck jobs in a match from ~20 depots a side with 3 trucks each, 0
+	// delivered in 30 minutes (sources 2+ km away), the game 2-6 fps slower and more vehicles in the jams.
+	static int SideTrucks()
+	{
+		string value;
+		if (System.GetCLIParam("aicfLogisticsSideTrucks", value) && !value.IsEmpty())
+			return Math.Max(0, value.ToInt());
+		return 8;
+	}
+
+	protected bool SideFleetFull(AICF_LogisticsWorker w)
+	{
+		int cap = SideTrucks();
+		if (cap <= 0)
+			return false;
+		int busy;
+		foreach (AICF_LogisticsWorker other : m_Registry.m_aWorkers)
+		{
+			if (other && other != w && other.m_Faction == w.m_Faction &&
+				(other.m_Lease || other.m_Vehicle || other.m_ePhase == AICF_ELogisticsPhase.SPAWN_PENDING))
+				busy++;
+		}
+		return busy >= cap;
+	}
+
 	// ZCR (22 Oct): why automatic dispatch passes a depot by, once a minute a depot (Everon: no truck job in eleven
 	// matches and no LOGISTICS_WAITING).
 	protected void AutoSkip(AICF_LogisticsWorker w, int now, string why)
@@ -151,6 +177,12 @@ class AICF_LogisticsService
 			if (w.m_ExitHistory && w.m_ExitHistory.AllCooling(w, now))
 			{
 				DeferWorker(w, now, "ALL_EXACT_DEPOT_EXITS_COOLING");
+				return;
+			}
+			if (SideFleetFull(w))
+			{
+				w.m_iRetryAtMs = now + 10000;
+				AutoSkip(w, now, "SIDE_TRUCK_CAP");
 				return;
 			}
 			if (m_Planner.Select(w, true))
