@@ -87,6 +87,52 @@ class AICF_AdaptiveCommanderPolicy
 		return force;
 	}
 
+	// ZCR (22 Oct): AllocatedForce for every base at once - one pass over the squads instead of one per candidate
+	// base (39 on Everon). The same sums: the same filters, the same 'assigned' test, per base.
+	protected void AllocatedForces(AICF_GroupSlot requesting, map<SCR_CampaignMilitaryBaseComponent, float> forces)
+	{
+		for (int i; i < m_State.GetSlotCount(); i++)
+		{
+			AICF_GroupSlot other = m_State.GetSlot(i);
+			if (!other || other == requesting || !other.IsCombatReady() || other.IsRecruitingInfantry() || other.IsResupplyingEquipment() ||
+				other.IsLoneSurvivorRetreat() || other.IsTemporaryRouteReplanHold() ||
+				other.IsPersistentStuckFieldHold() || other.HasPendingOrderRecovery() ||
+				other.GetRouteRecoveryEpisode().IsBlocked(other))
+				continue;
+			if (other.HasFailedMovement() || other.NeedsInfantryMuster())
+				continue;
+			array<SCR_CampaignMilitaryBaseComponent> targets = {};
+			if (!other.HasStrategicIntent())
+			{
+				if (other.GetTargetBase())
+					targets.Insert(other.GetTargetBase());
+			}
+			else if (other.GetStrategicIntentTargetKind() == AICF_EOrderTargetKind.POSITION)
+			{
+				vector point = other.GetStrategicIntentTargetPosition();
+				for (int n; n < m_Graph.GetNodeCount(); n++)
+				{
+					SCR_CampaignMilitaryBaseComponent near = m_Graph.GetNode(n).GetBase();
+					if (near && near.GetOwner() && vector.DistanceXZ(point, near.GetOwner().GetOrigin()) <= AICF_AdaptiveCommanderConfig.POINT_COMMIT_RADIUS)
+						targets.Insert(near);
+				}
+			}
+			else if (other.IsStrategicIntentRoleCurrent() && other.GetStrategicIntentTargetBase())
+				targets.Insert(other.GetStrategicIntentTargetBase());
+			if (targets.IsEmpty())
+				continue;
+			float force = AICF_AdaptiveScore.EffectiveForce(true, AICF_GroupRuntime.CountAliveAgents(other.GetGroup()), other.GetDesiredSize());
+			foreach (SCR_CampaignMilitaryBaseComponent target : targets)
+			{
+				if (other.IsRouteTargetDeferred(target))
+					continue;
+				float sum;
+				forces.Find(target, sum);
+				forces.Set(target, sum + force);
+			}
+		}
+	}
+
 	void RecordLoss(SCR_CampaignMilitaryBaseComponent lostBase)
 	{
 		if (!Replication.IsServer() || !m_Graph || !m_Faction || !lostBase || lostBase.GetFaction() == m_Faction)
@@ -100,6 +146,8 @@ class AICF_AdaptiveCommanderPolicy
 
 	protected void BuildCandidates(AICF_GroupSlot slot, int now, array<ref AICF_AdaptiveCandidate> candidates)
 	{
+		map<SCR_CampaignMilitaryBaseComponent, float> forces = new map<SCR_CampaignMilitaryBaseComponent, float>();
+		AllocatedForces(slot, forces);
 		array<int> attackNodes = {};
 		m_Selector.CollectAttackNodes(m_Graph, m_Faction, attackNodes);
 		bool usableAttack;
@@ -140,7 +188,9 @@ class AICF_AdaptiveCommanderPolicy
 			candidate.m_bDeferred = slot.IsRouteTargetDeferred(base);
 			if (slot.HasFailedMovement() && base == slot.GetTargetBase())
 				candidate.m_bDeferred = true;
-			candidate.m_fAllocated = AllocatedForce(slot, base);
+			float allocated;
+			forces.Find(base, allocated);
+			candidate.m_fAllocated = allocated;
 			candidate.m_bRecentLoss = m_aLossAt[i] > 0 && now - m_aLossAt[i] <= AICF_AdaptiveCommanderConfig.LOSS_TTL_MS;
 			if (candidate.m_bRecentLoss)
 				candidate.m_fDemand = Math.Max(candidate.m_fDemand, AICF_AdaptiveCommanderConfig.CONTESTED_DEMAND);
