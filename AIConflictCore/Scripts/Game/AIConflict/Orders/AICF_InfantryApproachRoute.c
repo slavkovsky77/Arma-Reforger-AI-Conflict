@@ -8,6 +8,12 @@ class AICF_InfantryApproachRoute
 	protected int m_iTileWaitStartedAtMs;
 	protected string m_sSide;          // ZCR: the marching group's side, for its kill zones
 	protected vector m_vTileCandidate;
+	protected int m_iLastCover = -1;   // ZCR: the cover score of the last leg's end point (cover= on INFANTRY_APPROACH_ASSIGNED)
+
+	int GetLastCover()
+	{
+		return m_iLastCover;
+	}
 
 	bool CanResumeTileWait(SCR_AIGroup group)
 	{
@@ -123,6 +129,7 @@ class AICF_InfantryApproachRoute
 				}
 			}
 		}
+		m_iLastCover = bestScore;
 		if (bestScore == 0 && !m_sSide.IsEmpty() && AICF_DangerZones.Near(point, m_sSide))
 		{
 			foreach (float side : {80.0, -80.0, 120.0, -120.0})

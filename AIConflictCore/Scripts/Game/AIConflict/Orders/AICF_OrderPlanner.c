@@ -2333,7 +2333,7 @@ class AICF_OrderPlanner
 				string.Format("faction=%1 numeric_slot=%2 group_generation=%3 assignment_revision=%4 target=%5 waypoint=%6 endpoint=%7 lane_m=%8 tile_wait=%9",
 					faction.GetFactionKey(), slot.GetSlotId(), slot.GetSpawnGeneration(), slot.GetStrategicAssignmentRevision(),
 					AICF_Stage1Diagnostics.BaseKey(target), newWaypoint.GetID(), newWaypoint.GetOrigin(), AICF_InfantryApproachRoute.GetLaneOffset(slot.GetSlotId()),
-					slot.GetApproachRoute(target).IsWaitingForTile()));
+					slot.GetApproachRoute(target).IsWaitingForTile()) + " cover=" + slot.GetApproachRoute(target).GetLastCover().ToString());
 		}
 		LogOrderWaypointCreated(slot, faction, target, newWaypoint, reason, trigger);
 
