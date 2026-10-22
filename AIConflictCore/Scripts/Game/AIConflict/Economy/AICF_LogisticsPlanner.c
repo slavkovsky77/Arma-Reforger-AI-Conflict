@@ -272,6 +272,81 @@ class AICF_LogisticsPlanner
 		return any;
 	}
 
+	// ZCR (22 Oct): several trucks to one base all drove to the one road point nearest its centre and met there
+	// head-on (Arland w6: three trucks of one depot jammed three times at its unload point; 7 of ~30 Arland jams were
+	// supply truck against supply truck). A point within SPREAD_M of where another live job loads or unloads moves to
+	// the nearest free road point (3 m+ wide) within the base's reach. -aicfLogisticsNoSpread: off.
+	static const float SPREAD_M = 20;
+
+	protected vector Spread(AICF_LogisticsEndpoint e, vector point)
+	{
+		if (System.IsCLIParam("aicfLogisticsNoSpread") || !e || !e.IdentityValid())
+			return point;
+		array<vector> taken = {};
+		foreach (AICF_LogisticsJob job : m_Book.m_aJobs)
+		{
+			if (!job || job.m_bCancelled)
+				continue;
+			if (job.m_vLoad != vector.Zero)
+				taken.Insert(job.m_vLoad);
+			if (job.m_vUnload != vector.Zero)
+				taken.Insert(job.m_vUnload);
+		}
+		if (!Crowded(taken, point))
+			return point;
+		SCR_AIWorld world = SCR_AIWorld.Cast(GetGame().GetAIWorld());
+		if (!world || !world.GetRoadNetworkManager())
+			return point;
+		vector center = e.m_Base.GetOwner().GetOrigin();
+		float reach = e.m_Base.GetRadius() - 5 + EdgeMarginM();
+		array<BaseRoad> found = {};
+		world.GetRoadNetworkManager().GetRoadsInAABB(center - Vector(reach, 200, reach), center + Vector(reach, 200, reach), found);
+		float best = 1000000;
+		vector pick = point;
+		array<vector> points = {};
+		foreach (BaseRoad road : found)
+		{
+			if (!road || road.GetWidth() < 3)
+				continue;
+			points.Clear();
+			road.GetPoints(points);
+			for (int i = 0; i + 1 < points.Count(); i++)
+			{
+				vector a = points[i];
+				vector b = points[i + 1];
+				int steps = Math.Max(1, (int)(vector.DistanceXZ(a, b) / 5));
+				float stepsF = steps;
+				for (int k = 0; k <= steps; k++)
+				{
+					float kF = k;
+					vector q = a + (b - a) * (kF / stepsF);
+					if (vector.DistanceXZ(q, center) > reach || Crowded(taken, q))
+						continue;
+					float d = vector.DistanceXZ(q, point);
+					if (d < best)
+					{
+						best = d;
+						pick = q;
+					}
+				}
+			}
+		}
+		if (pick != point)
+			AICF_Stage4Diagnostics.Info("LOGISTICS_POINT_SPREAD", string.Format("base=%1 from=%2,%3 to=%4,%5 moved_m=%6 taken=%7",
+				e.Key(), Math.Round(point[0]), Math.Round(point[2]), Math.Round(pick[0]), Math.Round(pick[2]), Math.Round(best), taken.Count()));
+		return pick;
+	}
+
+	static bool Crowded(array<vector> taken, vector p)
+	{
+		foreach (vector t : taken)
+		{
+			if (vector.DistanceXZ(t, p) < SPREAD_M)
+				return true;
+		}
+		return false;
+	}
+
 	// ZCR (20 Oct): a supply truck may use the road up to 100 m beyond a base's edge and load or unload
 	// there - with the road inside the base radius only, 17 of 28 waits were ROAD_ROUTE_NOT_PROVEN and
 	// trucks hardly ever left. -aicfLogisticsStrictRoute: inside the radius only.
@@ -465,6 +540,8 @@ class AICF_LogisticsPlanner
 			}
 			w.m_Search = null;
 			if (preflight) return true;
+			if (source) load = Spread(source, load);
+			unload = Spread(destination, unload);
 			if (source) source.m_vPosition = load;
 			destination.m_vPosition = unload;
 			return m_Book.Reserve(w, source, destination, amount, returning, m_Config, m_Graph.GetRevision());
