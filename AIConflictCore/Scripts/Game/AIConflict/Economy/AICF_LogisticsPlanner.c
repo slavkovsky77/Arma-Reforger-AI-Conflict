@@ -16,9 +16,12 @@ class AICF_LogisticsSearch
 	int m_iRevision;
 	int m_iGeneration;
 	int m_iStartedAtMs;
+	int m_iBeganAtMs;     // ZCR: when the search began (m_iStartedAtMs restarts once prepared)
 	bool m_bReturn;
 	bool m_bPrepared;
 	ref array<ref AICF_LogisticsEndpoint> m_aEndpoints = {};
+	ref array<AICF_LogisticsEndpoint> m_aSources = {};   // ZCR: endpoints with supplies to give, listed once
+	int m_iSourceScan;
 	int m_iDestinationCursor;
 	int m_iSourceCursor = -1;
 	vector m_vOrigin;
@@ -62,6 +65,14 @@ class AICF_LogisticsPlanner
 		return Math.Max(0, actual - capacity * keep / 100 - reserved);
 	}
 
+	// The capacity a base's percentages are of (m_fCapacityBasisMax).
+	float Basis(float capacity)
+	{
+		if (m_Config.m_fCapacityBasisMax <= 0)
+			return capacity;
+		return Math.Min(capacity, m_Config.m_fCapacityBasisMax);
+	}
+
 	void BeginTick() { m_iQueries = 0; m_iCandidatesVisited = 0; }
 
 	void Reconcile(SCR_CampaignFaction us, SCR_CampaignFaction ussr)
@@ -93,7 +104,7 @@ class AICF_LogisticsPlanner
 			bool wasOpen = endpoint.m_bOpen;
 			endpoint.m_bOpen = false;
 			if (faction && (faction == us || faction == ussr) && (base == faction.GetMainBase() || base.GetType() != SCR_ECampaignBaseType.SOURCE_BASE))
-				endpoint.m_bOpen = DemandOpen(wasOpen, pool.Value(), pool.Capacity(), m_Config.m_fRequestBelowPercent, m_Config.m_fTargetPercent);
+				endpoint.m_bOpen = DemandOpen(wasOpen, pool.Value(), Basis(pool.Capacity()), m_Config.m_fRequestBelowPercent, m_Config.m_fTargetPercent);
 			if (!wasOpen && endpoint.m_bOpen) endpoint.m_iOpenedAtMs = System.GetTickCount();
 			next.Insert(endpoint);
 		}
@@ -156,7 +167,7 @@ class AICF_LogisticsPlanner
 			return Math.Max(0, e.m_Pool.Value() - keep - commitments - reserved);
 		}
 		if (e.m_bOpen) return 0;
-		return Donatable(e.m_Pool.Value(), e.m_Pool.Capacity(), m_Config.m_fDonateAbovePercent, m_Config.m_fDonorKeepPercent, reserved + commitments, exclude != null);
+		return Donatable(e.m_Pool.Value(), Basis(e.m_Pool.Capacity()), m_Config.m_fDonateAbovePercent, m_Config.m_fDonorKeepPercent, reserved + commitments, exclude != null);
 	}
 
 	float Need(AICF_LogisticsEndpoint e, AICF_LogisticsJob exclude = null, bool returning = false)
@@ -164,7 +175,7 @@ class AICF_LogisticsPlanner
 		if (!e || !e.IdentityValid()) return 0;
 		float target = m_Config.m_fTargetPercent;
 		if (returning || (exclude && exclude.m_bManual)) target = 100;
-		return Deficit(e.m_Pool.Value(), e.m_Pool.Capacity(), target, m_Book.Reserved(e.m_Pool, true, exclude));
+		return Deficit(e.m_Pool.Value(), Basis(e.m_Pool.Capacity()), target, m_Book.Reserved(e.m_Pool, true, exclude));
 	}
 
 	protected bool Before(AICF_LogisticsEndpoint a, AICF_LogisticsEndpoint b)
@@ -296,6 +307,7 @@ class AICF_LogisticsPlanner
 		search.m_iRevision = m_Graph.GetRevision();
 		search.m_iGeneration = w.m_iGeneration;
 		search.m_iStartedAtMs = System.GetTickCount();
+		search.m_iBeganAtMs = search.m_iStartedAtMs;
 		w.m_Search = search;
 		foreach (AICF_LogisticsEndpoint snapshot : m_aEndpoints) search.m_aEndpoints.Insert(snapshot);
 		search.m_vOrigin = w.m_Depot.GetOrigin();
@@ -315,9 +327,21 @@ class AICF_LogisticsPlanner
 		AICF_LogisticsSearch search = w.m_Search;
 		AICF_LogisticsEndpoint original;
 		if (!w.m_aCargo.IsEmpty()) original = w.m_aCargo[0].m_Source;
+		// ZCR (22 Oct): the bases with supplies to give, once - not every base again for every base in need.
+		if (search.m_fCargo <= 0)
+		{
+			while (search.m_iSourceScan < search.m_aEndpoints.Count())
+			{
+				if (m_iCandidatesVisited >= AICF_LogisticsConfig.VISIT_BUDGET) return false;
+				m_iCandidatesVisited++;
+				AICF_LogisticsEndpoint giver = search.m_aEndpoints[search.m_iSourceScan++];
+				if (giver.IdentityValid() && Available(giver, w.m_Faction) >= m_Config.m_fMinDispatchSupplies)
+					search.m_aSources.Insert(giver);
+			}
+		}
 		while (search.m_iDestinationCursor < search.m_aEndpoints.Count())
 		{
-			if (m_iCandidatesVisited >= AICF_LogisticsConfig.SEARCH_BUDGET) return false;
+			if (m_iCandidatesVisited >= AICF_LogisticsConfig.VISIT_BUDGET) return false;
 			AICF_LogisticsEndpoint destination = search.m_aEndpoints[search.m_iDestinationCursor];
 			float need = Need(destination, null, search.m_bReturn);
 			if (search.m_iSourceCursor < 0)
@@ -358,11 +382,11 @@ class AICF_LogisticsPlanner
 				}
 				search.m_iSourceCursor = 0;
 			}
-			while (search.m_iSourceCursor < search.m_aEndpoints.Count())
+			while (search.m_iSourceCursor < search.m_aSources.Count())
 			{
-				if (m_iCandidatesVisited >= AICF_LogisticsConfig.SEARCH_BUDGET) return false;
+				if (m_iCandidatesVisited >= AICF_LogisticsConfig.VISIT_BUDGET) return false;
 				m_iCandidatesVisited++;
-				AICF_LogisticsEndpoint source = search.m_aEndpoints[search.m_iSourceCursor++];
+				AICF_LogisticsEndpoint source = search.m_aSources[search.m_iSourceCursor++];
 				if (!source.IdentityValid() || !destination.IdentityValid()) continue;
 				if (source.m_Pool.Overlaps(destination.m_Pool)) continue;
 				float q = Math.Min(search.m_fCapacity, Math.Min(Available(source, w.m_Faction), need));
@@ -383,6 +407,10 @@ class AICF_LogisticsPlanner
 		}
 		search.m_bPrepared = true;
 		search.m_iStartedAtMs = System.GetTickCount();
+		// ZCR (22 Oct): Everon - not one truck job in eleven matches, no LOGISTICS_WAITING either: how long a search
+		// takes to prepare, and how many pairs it found.
+		w.Log("LOGISTICS_SEARCH_PREPARED", string.Format("candidates=%1 endpoints=%2 sources=%6 took_ms=%3 return=%4 reason=%5",
+			search.m_aCandidates.Count(), search.m_aEndpoints.Count(), search.m_iStartedAtMs - search.m_iBeganAtMs, search.m_bReturn, w.m_sPlanningReason, search.m_aSources.Count()));
 		return true;
 	}
 
@@ -390,7 +418,15 @@ class AICF_LogisticsPlanner
 	{
 		if (!w || (!preflight && (!w.Ready() || w.m_Job))) return false;
 		if (w.m_Search && (w.m_Search.m_iRevision != m_Graph.GetRevision() || w.m_Search.m_iGeneration != w.m_iGeneration ||
-			w.m_Search.m_bReturn != returning || (w.m_Search.m_bPrepared && System.GetTickCount() - w.m_Search.m_iStartedAtMs > m_Config.m_iBlockedRetryMs))) w.m_Search = null;
+			w.m_Search.m_bReturn != returning || (w.m_Search.m_bPrepared && System.GetTickCount() - w.m_Search.m_iStartedAtMs > m_Config.m_iBlockedRetryMs)))
+		{
+			// ZCR: a search dropped unfinished after 10 s or more (the graph changed under it).
+			int age = System.GetTickCount() - w.m_Search.m_iBeganAtMs;
+			if (!w.m_Search.m_bPrepared && age >= 10000)
+				w.Log("LOGISTICS_SEARCH_DROPPED", string.Format("age_ms=%1 destination=%2 of %3 revision=%4 now=%5",
+					age, w.m_Search.m_iDestinationCursor, w.m_Search.m_aEndpoints.Count(), w.m_Search.m_iRevision, m_Graph.GetRevision()));
+			w.m_Search = null;
+		}
 		if (!w.m_Search) PrepareSearch(w, preflight, returning);
 		AICF_LogisticsSearch search = w.m_Search;
 		if (!search.m_bPrepared && !PrepareCandidates(w)) return false;
@@ -400,7 +436,7 @@ class AICF_LogisticsPlanner
 		while (search.m_iCursor < search.m_aCandidates.Count())
 		{
 			// Оставшийся cursor продолжается на следующем tick без return failure.
-			if (m_iQueries + 2 > AICF_LogisticsConfig.SEARCH_BUDGET || m_iCandidatesVisited >= AICF_LogisticsConfig.SEARCH_BUDGET) return false;
+			if (m_iQueries + 2 > AICF_LogisticsConfig.SEARCH_BUDGET || m_iCandidatesVisited >= AICF_LogisticsConfig.VISIT_BUDGET) return false;
 			m_iCandidatesVisited++;
 			AICF_LogisticsCandidate candidate = search.m_aCandidates[search.m_iCursor++];
 			AICF_LogisticsEndpoint destination = candidate.m_Destination;

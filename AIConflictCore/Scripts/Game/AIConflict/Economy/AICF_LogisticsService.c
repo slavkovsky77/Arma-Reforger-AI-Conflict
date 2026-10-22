@@ -114,19 +114,40 @@ class AICF_LogisticsService
 
 	// The automatic scheduler as it was before manual dispatch (upstream 2a00451^): spawn a truck for a
 	// depot with work, load where supplies are spare, deliver where they are short, return home.
+	// ZCR (22 Oct): why automatic dispatch passes a depot by, once a minute a depot (Everon: no truck job in eleven
+	// matches and no LOGISTICS_WAITING).
+	protected void AutoSkip(AICF_LogisticsWorker w, int now, string why)
+	{
+		if (w.m_iAutoSkipLogMs != 0 && now - w.m_iAutoSkipLogMs < 60000)
+			return;
+		w.m_iAutoSkipLogMs = now;
+		w.Log("LOGISTICS_AUTO_SKIP", "reason=" + why);
+	}
+
 	protected void AutoSelectWork(AICF_LogisticsWorker w, int now)
 	{
-		if (w.m_bCargoFault || w.m_DriverInteraction || now < w.m_iRetryAtMs || w.m_Job) return;
+		if (w.m_bCargoFault || w.m_DriverInteraction || now < w.m_iRetryAtMs || w.m_Job)
+		{
+			if (w.m_bCargoFault) AutoSkip(w, now, "CARGO_FAULT");
+			else if (w.m_DriverInteraction) AutoSkip(w, now, "DRIVER_INTERACTION");
+			else if (!w.m_Job) AutoSkip(w, now, "RETRY_WAIT");
+			return;
+		}
 		if (w.m_bCleanupComplete)
 		{
-			if (now - w.m_iRetryAtMs < m_Config.m_iReplacementCooldownMs) return;
+			if (now - w.m_iRetryAtMs < m_Config.m_iReplacementCooldownMs) { AutoSkip(w, now, "REPLACEMENT_COOLDOWN"); return; }
 			w.m_bCleanupQueued = false;
 		}
-		if (w.m_bCleanupQueued) return;
+		if (w.m_bCleanupQueued) { AutoSkip(w, now, "CLEANUP_QUEUED"); return; }
 		bool homeLive = w.m_bEligible && AICF_LogisticsDepotRegistry.Live(w);
 		if (!w.m_Lease)
 		{
-			if (!homeLive || w.m_Group || w.m_Vehicle) return;
+			if (!homeLive || w.m_Group || w.m_Vehicle)
+			{
+				if (!homeLive) AutoSkip(w, now, "HOME_NOT_LIVE");
+				else AutoSkip(w, now, "GROUP_OR_VEHICLE_WITHOUT_LEASE");
+				return;
+			}
 			if (w.m_ExitHistory && w.m_ExitHistory.AllCooling(w, now))
 			{
 				DeferWorker(w, now, "ALL_EXACT_DEPOT_EXITS_COOLING");
@@ -137,6 +158,8 @@ class AICF_LogisticsService
 				if (!m_Vehicles.BeginLogisticsSpawn(w)) DeferWorker(w, now, "SHARED_FLEET_OR_AI_ADMISSION");
 			}
 			else if (!w.m_Search) DeferWorker(w, now, w.m_sPlanningReason);
+			else AutoSkip(w, now, string.Format("SEARCHING prepared=%1 destination=%2 of %3 candidates=%4 cursor=%5",
+				w.m_Search.m_bPrepared, w.m_Search.m_iDestinationCursor, w.m_Search.m_aEndpoints.Count(), w.m_Search.m_aCandidates.Count(), w.m_Search.m_iCursor));
 			return;
 		}
 		if (!w.Ready()) return;

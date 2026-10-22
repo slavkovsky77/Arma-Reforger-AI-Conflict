@@ -143,6 +143,7 @@ class AICF_LogisticsWorker
 	int m_iLastLogMs;
 	string m_sLastReason;
 	string m_sPlanningReason = "NO_OPEN_DEMAND";
+	int m_iAutoSkipLogMs;   // ZCR: last LOGISTICS_AUTO_SKIP
 
 	bool GroupIdentity()
 	{

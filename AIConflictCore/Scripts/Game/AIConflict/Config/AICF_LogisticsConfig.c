@@ -18,6 +18,9 @@ class AICF_LogisticsConfig
 	static const float DRIVER_INTERACTION_RADIUS_M = 50;
 	static const int REGISTRY_BUDGET = 4;
 	static const int SEARCH_BUDGET = 16;
+	// ZCR (22 Oct): base pairs a tick a truck search may look at (no road queries - those stay SEARCH_BUDGET). At 16,
+	// shared, Everon's 39 bases made a search of ~800 pairs that never finished: no truck job in eleven matches.
+	static const int VISIT_BUDGET = 64;
 	// ZCR: supplies flow from the main base to the front - a base asks below 35% (was 40) and is filled to
 	// 50% (80); a donor keeps 50% (80) and gives above 55% (90) - AI Conflict's order request < target <=
 	// keep < donate. With 40/80/90 the trucks had "no open demand" (2 deliveries in 42 matches); with
@@ -29,6 +32,11 @@ class AICF_LogisticsConfig
 	float m_fTargetPercent = 80;
 	float m_fDonateAbovePercent = 85;
 	float m_fDonorKeepPercent = 80;
+	// ZCR (22 Oct): the percentages above are of a base's capacity, at most this much. Everon's main bases hold
+	// 9000-9800 and sat at ~6000 (60%) all match - asking for supplies themselves, never giving: not one truck job
+	// in eleven Everon matches (Arland's main base holds 4500 and fills, its trucks run). Of 5000, a big main base
+	// keeps 4000 and gives the rest. 0: the whole capacity.
+	float m_fCapacityBasisMax = 5000;
 	float m_fNeutralSourceReserveSupplies;
 	float m_fOwnedSourceReserveSupplies = 200;   // ZCR: 200 (was 500) - a source keeps less back
 	float m_fMinDispatchSupplies = 50;
@@ -53,6 +61,7 @@ class AICF_LogisticsConfig
 		ReadFloat("TargetPercent", m_fTargetPercent);
 		ReadFloat("DonateAbovePercent", m_fDonateAbovePercent);
 		ReadFloat("DonorKeepPercent", m_fDonorKeepPercent);
+		ReadFloat("CapacityBasisMax", m_fCapacityBasisMax);
 		ReadFloat("NeutralSourceReserveSupplies", m_fNeutralSourceReserveSupplies);
 		ReadFloat("OwnedSourceReserveSupplies", m_fOwnedSourceReserveSupplies);
 		ReadFloat("MinDispatchSupplies", m_fMinDispatchSupplies);
@@ -144,7 +153,7 @@ class AICF_LogisticsConfig
 		string details = string.Format("schema_version=2 request_below_percent=%1 target_percent=%2 donate_above_percent=%3 donor_keep_percent=%4 neutral_reserve=%5 owned_reserve=%6 min_dispatch=%7 max_cargo=%8 workers_per_depot=%9",
 			m_fRequestBelowPercent, m_fTargetPercent, m_fDonateAbovePercent, m_fDonorKeepPercent, m_fNeutralSourceReserveSupplies,
 			m_fOwnedSourceReserveSupplies, m_fMinDispatchSupplies, m_fMaxCargoPerTrip, 0);
-		details += " workers_per_depot_unlimited=1 logistics_fleet_cap=0";
+		details += " workers_per_depot_unlimited=1 logistics_fleet_cap=0 capacity_basis_max=" + m_fCapacityBasisMax.ToString();
 		details += string.Format(" planner_ms=%1 poll_ms=%2 reservation_ttl_ms=%3 replacement_ms=%4 blocked_retry_ms=%5 return_attempts=%6 idle_retire_ms=%7 arrival_m=%8 stationary_mps=%9",
 			m_iPlannerIntervalMs, m_iWorkerPollMs, m_iReservationTtlMs, m_iReplacementCooldownMs, m_iBlockedRetryMs,
 			m_iReturnSearchMaxAttempts, m_iIdleRetireMs, m_fArrivalRadiusM, m_fStationarySpeedMps);
