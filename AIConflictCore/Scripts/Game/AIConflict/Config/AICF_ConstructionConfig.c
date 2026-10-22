@@ -16,6 +16,7 @@ class AICF_ConstructionConfig
 	float m_fMargin = 1;
 	float m_fHeightDelta = 0.8;
 	float m_fTerrainStep = 3;
+	float m_fSpeed = 1;          // ZCR: the lab's speed-up (-zcrSpeed), for timers in game time
 
 	void AICF_ConstructionConfig()
 	{
@@ -28,6 +29,7 @@ class AICF_ConstructionConfig
 		float speed = 1;
 		if (System.GetCLIParam("zcrSpeed", value) && !value.IsEmpty())
 			speed = Math.Max(1, value.ToFloat());
+		m_fSpeed = speed;
 		m_iDecisionMs = 60000 / speed;
 		m_iCooldownMs = 60000 / speed;
 		m_iDeadlineMs = 120000 / speed;

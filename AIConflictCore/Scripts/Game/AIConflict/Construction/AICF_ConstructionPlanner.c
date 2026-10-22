@@ -671,6 +671,11 @@ class AICF_ConstructionPlanner
 			for (int backoff = 1; backoff < failures; backoff++)
 				retryMs *= 2;
 			retryMs = Math.Max(m_Config.m_iCooldownMs, Math.Min(480000, retryMs));
+			// ZCR (22 Oct night): the big compositions rarely fit - heavy depots 1 placed to 74 searches given up, large
+			// barracks 17 to 52 - and their searches took the shared budget from light depots and fortifications (and
+			// showed 'choosing a site' all match). After a failed search they wait 10 game minutes at that base.
+			if (order.m_eType == AICF_EConstructionType.HEAVY_DEPOT || order.m_eType == AICF_EConstructionType.LARGE_BARRACKS)
+				retryMs = Math.Max(retryMs, (int)(600000 / m_Config.m_fSpeed));
 			state.m_aSearchRetryAt[order.m_eType] = System.GetTickCount() + retryMs;
 			order.Log("CONSTRUCTION_SEARCH_BACKOFF", string.Format("failures=%1 retry_ms=%2 terminal_reason=%3 cause=%4", failures, retryMs, reason, cause));
 		}
