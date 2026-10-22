@@ -1644,15 +1644,19 @@ class AICF_VehicleCleanupManager
 					compartment.GetOccupant() == character;
 				bool useEject = exactOwner &&
 					job.m_iManagedExactRecoveryAttempts > 1;
+				// Only a soldier sitting in a seat: the engine's FindSuitableTeleportLocation / GetOutVehicle read his
+				// seat, and one caught getting in or out (no seat yet) crashed the game here 3 times (20-22 Oct,
+				// access violation at 0x40). He is tried again on the next pass.
+				bool seated = compartment && compartment.GetOccupant() == character;
 				bool directAccepted;
 				vector exitTransform[4];
-				if (!useEject && access.FindSuitableTeleportLocation(exitTransform))
+				if (!useEject && seated && access.FindSuitableTeleportLocation(exitTransform))
 					directAccepted = access.GetOutVehicle_NoDoor(
 						exitTransform,
 						false,
 						false,
 						true);
-				if (!useEject && !directAccepted)
+				if (!useEject && seated && !directAccepted)
 					directAccepted = access.GetOutVehicle(
 						EGetOutType.TELEPORT,
 						-1,

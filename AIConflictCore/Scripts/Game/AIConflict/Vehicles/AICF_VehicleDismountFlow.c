@@ -987,11 +987,15 @@ class AICF_VehicleDismountFlow
 			compartment.GetOccupant() == character;
 		access.InterruptVehicleActionQueue(true, true, true);
 		bool useEject = exactOwner && forceAttempt > 1;
+		// Only a soldier sitting in a seat (see AICF_VehicleCleanupManager: the engine call crashed for one getting in/out).
+		compartment = access.GetCompartment();
+		bool seated = compartment && compartment.GetOccupant() == character;
+		exactOwner = exactOwner && seated && compartment.GetVehicle() == vehicle;
 		bool directAccepted;
 		vector exitTransform[4];
-		if (!useEject && access.FindSuitableTeleportLocation(exitTransform))
+		if (!useEject && seated && access.FindSuitableTeleportLocation(exitTransform))
 			directAccepted = access.GetOutVehicle_NoDoor(exitTransform, false, false, true);
-		if (!useEject && !directAccepted)
+		if (!useEject && seated && !directAccepted)
 			directAccepted = access.GetOutVehicle(
 				EGetOutType.TELEPORT,
 				-1,
