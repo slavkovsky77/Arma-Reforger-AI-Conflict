@@ -49,6 +49,24 @@ class AICF_VehicleWaypointFactory
 				{
 					resolvedPosition = roadPosition;
 					routeMode = "ROAD_REACHABLE";
+					// ZCR (22 Oct): a road point a vehicle couldn't reach earlier this match (a farm road behind fences and a
+					// gate - Everon (5067,5413), match after match): one on the approach side instead.
+					if (AICF_BadRoadPoints.IsBad(roadPosition, 30))
+					{
+						vector back = fromPosition - targetPosition;
+						back[1] = 0;
+						vector alternative;
+						if (back.Length() > 1)
+						{
+							back.Normalize();
+							if (roadNetworkManager.GetReachableWaypointInRoad(fromPosition, targetPosition + back * 80, targetRangeMeters + 40, alternative) &&
+								!AICF_BadRoadPoints.IsBad(alternative, 30))
+							{
+								resolvedPosition = alternative;
+								routeMode = "ROAD_REACHABLE_AVOIDED";
+							}
+						}
+					}
 				}
 				else
 				{
@@ -117,4 +135,29 @@ class AICF_VehicleWaypointFactory
 		return waypoint;
 	}
 
+}
+
+// ZCR (22 Oct): road points a vehicle's move couldn't reach this match (the game's UNREACHABLE - ZCR's OnMoveFailed hook
+// adds them). The same few points failed match after match on Everon: farm roads inside fenced yards.
+class AICF_BadRoadPoints
+{
+	protected static ref array<vector> s_aPoints = {};
+
+	static void Add(vector point)
+	{
+		if (IsBad(point, 5))
+			return;
+		s_aPoints.Insert(point);
+		AICF_Stage3Diagnostics.Info("VEHICLE_ROAD_POINT_AVOIDED", string.Format("x=%1 z=%2 count=%3", Math.Round(point[0]), Math.Round(point[2]), s_aPoints.Count()));
+	}
+
+	static bool IsBad(vector point, float radius)
+	{
+		foreach (vector bad : s_aPoints)
+		{
+			if (vector.DistanceXZ(bad, point) < radius)
+				return true;
+		}
+		return false;
+	}
 }
