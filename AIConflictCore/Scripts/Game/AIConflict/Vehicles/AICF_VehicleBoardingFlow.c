@@ -2495,6 +2495,15 @@ class AICF_VehicleBoardingFlow
 					}
 					continue;
 				}
+				// ZCR (22 Oct, lab): -aicfNoHiddenSeat - no forced teleport into the seat; the passenger waits for the phase
+				// deadline as when a player is near. A forced seat came in the 10 s before 2 of 12 watched crashes (lift 3.4).
+				if (System.IsCLIParam("aicfNoHiddenSeat"))
+				{
+					if (token.RecordRecoveryFence("LAB_DISABLED"))
+						AICF_Stage3Diagnostics.Info("PASSENGER_HIDDEN_EXACT_CARGO_DEFERRED",
+							DescribeTokenContext(trip, lease, token, causationId, "LAB_DISABLED") + " action=WAIT_UNTIL_PHASE_DEADLINE");
+					continue;
+				}
 				token.RecordRecoveryFence("PASSED");
 				int hiddenPendingAgeMs =
 					token.GetHiddenExactSeatRecoveryPendingAgeMs();
