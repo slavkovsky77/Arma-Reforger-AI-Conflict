@@ -16,6 +16,10 @@ modded class SCR_GameModeCampaign
 	{
 		// Stock Conflict initializes its manager, bases, and radio coverage inside this call.
 		super.OnGameStart();
+		// -aicfOff (lab): stock Conflict only - the bases and their supply caches with no AI armies, for the driving test
+		// track (22 Oct: the Moss Hill trap needs the Conflict base layer; with AI Conflict on, its war ran round the track).
+		if (System.IsCLIParam("aicfOff"))
+			return;
 
 		m_sAICFMapKey = AICF_ResolveSupportedMapKey();
 		if (m_sAICFMapKey.IsEmpty())
