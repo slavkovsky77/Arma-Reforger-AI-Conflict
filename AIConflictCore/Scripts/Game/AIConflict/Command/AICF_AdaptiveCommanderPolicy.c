@@ -154,7 +154,7 @@ class AICF_AdaptiveCommanderPolicy
 				if (friendly && m_aLossAt[next] > 0 && now - m_aLossAt[next] <= AICF_AdaptiveCommanderConfig.LOSS_TTL_MS)
 				candidate.m_bRecentLoss = true;
 			}
-			candidate.m_iConnectivity = CountDependentFriendlyNodes(i);
+			candidate.m_iConnectivity = Connectivity(i, now);
 			// Без срочности ATTACK сохраняет наступательное назначение; слабый отряд
 			// получает только безопасный HQ hold. DEFEND держит передний край.
 			if (friendly && !threatened)
@@ -174,13 +174,33 @@ class AICF_AdaptiveCommanderPolicy
 		}
 	}
 
+	// ZCR (22 Oct): every squad's Select counted this for every base - two graph searches each, the same for
+	// every squad of the tick; Everon's 39 bases made AI Conflict's commander tick 60-94 ms on nearly every tick
+	// (Arland: under 20), a stutter every few seconds. Once for all bases, kept for a second.
+	protected ref array<int> m_aZcrConnectivity = {};
+	protected int m_iZcrConnectivityAt;
+
+	protected int Connectivity(int node, int now)
+	{
+		if (m_aZcrConnectivity.Count() != m_Graph.GetNodeCount() || now - m_iZcrConnectivityAt > 1000 || now < m_iZcrConnectivityAt)
+		{
+			m_aZcrConnectivity.Clear();
+			array<int> withAnchor = {};
+			CollectFriendlyReachable(-1, withAnchor);
+			for (int i; i < m_Graph.GetNodeCount(); i++)
+				m_aZcrConnectivity.Insert(CountDependentFriendlyNodes(i, withAnchor));
+			m_iZcrConnectivityAt = now;
+		}
+		if (node < 0 || node >= m_aZcrConnectivity.Count())
+			return 0;
+		return m_aZcrConnectivity[node];
+	}
+
 	// Friendly nodes reachable from HQ that would lose connectivity without this
 	// anchor. Pure graph topology; no map names, physical path claims or hidden AI.
-	protected int CountDependentFriendlyNodes(int excluded)
+	protected int CountDependentFriendlyNodes(int excluded, array<int> withAnchor)
 	{
-		array<int> withAnchor = {};
 		array<int> withoutAnchor = {};
-		CollectFriendlyReachable(-1, withAnchor);
 		CollectFriendlyReachable(excluded, withoutAnchor);
 		int lost;
 		foreach (int node : withAnchor)

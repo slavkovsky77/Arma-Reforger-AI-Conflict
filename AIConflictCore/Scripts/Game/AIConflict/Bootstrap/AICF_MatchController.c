@@ -4088,9 +4088,31 @@ class AICF_MatchController
 	{
 		if (!factionState || !faction)
 			return false;
+		// ZCR (22 Oct): on Everon this tick took 60-94 ms on nearly every tick (Arland under 20) - where it goes.
+		int zcrStart = System.GetTickCount();
+		int zcrMark;
+		int zcrVehicleMs;
+		int zcrCheckMs;
+		int zcrReconcileMs;
+		int zcrRecoverMs;
+		int zcrAssignMs;
+		int zcrSlots;
+		int zcrMaxSlotMs;
+		int zcrMaxSlot = -1;
+		int zcrSlotStart;
 
 		for (int slotId = 0; slotId < factionState.GetSlotCount(); slotId++)
 		{
+			if (zcrSlotStart > 0)
+			{
+				int zcrSlotMs = System.GetTickCount() - zcrSlotStart;
+				if (zcrSlotMs > zcrMaxSlotMs)
+				{
+					zcrMaxSlotMs = zcrSlotMs;
+					zcrMaxSlot = slotId - 1;
+				}
+			}
+			zcrSlotStart = System.GetTickCount();
 			AICF_GroupSlot slot = factionState.GetSlot(slotId);
 			if (slot && (slot.IsRecruitingInfantry() || slot.IsResupplyingEquipment()))
 				continue;
@@ -4107,6 +4129,8 @@ class AICF_MatchController
 				m_VehicleCoordinator.IsRestorePending(slot);
 			if (vehicleControlled || vehicleRestorePending)
 			{
+				zcrSlots++;
+				zcrMark = System.GetTickCount();
 				bool waypointSuspendedByVehicle =
 					m_VehicleCoordinator.IsInfantryOrderSuspended(slot);
 				bool vehicleOrderChanged;
@@ -4139,6 +4163,7 @@ class AICF_MatchController
 						reason,
 						m_iStrategicBaseRevision);
 				}
+				zcrVehicleMs += System.GetTickCount() - zcrMark;
 				continue;
 			}
 			// ReliabilityTick owns the bounded hold and its full-replan transition.
@@ -4165,10 +4190,14 @@ class AICF_MatchController
 			// dedicated Conflict runtime, but can finish without invoking its user
 			// action. Preserve the stock radio eligibility rules and complete that
 			// authority operation only after a living managed agent has really arrived.
+			zcrSlots++;
+			zcrMark = System.GetTickCount();
 			if (TryCaptureArrivedRelay(slot, faction))
 				return true;
 
 			string failureReason = m_OrderPlanner.GetOrderFailureReason(slot, faction);
+			zcrCheckMs += System.GetTickCount() - zcrMark;
+			zcrMark = System.GetTickCount();
 			if (failureReason.IsEmpty())
 			{
 				if (aiCommander)
@@ -4190,12 +4219,14 @@ class AICF_MatchController
 						m_Config.GetRoleMinimumDwellMs(),
 						m_Config.GetCommanderIntervalMs());
 				}
+				zcrReconcileMs += System.GetTickCount() - zcrMark;
 				continue;
 			}
 
 			if (failureReason != "TARGET_INVALID")
 			{
 				TryRecoverOrder(factionState, slot, faction, failureReason);
+				zcrRecoverMs += System.GetTickCount() - zcrMark;
 				continue;
 			}
 
@@ -4213,8 +4244,16 @@ class AICF_MatchController
 					m_TargetSelector,
 					reason,
 					excludedTarget);
+			zcrAssignMs += System.GetTickCount() - zcrMark;
 		}
 
+		int zcrTotal = System.GetTickCount() - zcrStart;
+		if (zcrTotal >= 20)
+			AICF_Stage1Diagnostics.Info("COMMANDER_TICK_COST", string.Format("faction=%1 total_ms=%2 slots=%3 vehicle_ms=%4 check_ms=%5 reconcile_ms=%6 recover_ms=%7 assign_ms=%8 max_slot_ms=%9",
+				faction.GetFactionKey(), zcrTotal, zcrSlots, zcrVehicleMs, zcrCheckMs, zcrReconcileMs, zcrRecoverMs, zcrAssignMs, zcrMaxSlotMs) + " max_slot=" + zcrMaxSlot.ToString() + string.Format(" prep_ms=%1 select_ms=%2 plan_ms=%3", AICF_AICommander.s_iZcrPrepMs, AICF_AICommander.s_iZcrSelectMs, AICF_AICommander.s_iZcrPlanMs) + " reason=" + reason);
+		AICF_AICommander.s_iZcrPrepMs = 0;
+		AICF_AICommander.s_iZcrSelectMs = 0;
+		AICF_AICommander.s_iZcrPlanMs = 0;
 		return false;
 	}
 

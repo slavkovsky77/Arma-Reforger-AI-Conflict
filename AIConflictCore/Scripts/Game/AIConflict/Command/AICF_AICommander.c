@@ -158,9 +158,14 @@ class AICF_AICommander
 			!m_TargetSelector)
 			return false;
 
+		int zcrMark = System.GetTickCount();
 		m_OrderPlanner.PrepareAICommanderSelection(slot, m_Faction, reason);
+		s_iZcrPrepMs += System.GetTickCount() - zcrMark;
+		zcrMark = System.GetTickCount();
 		AICF_AdaptiveDecision decision = m_AdaptivePolicy.Select(slot);
-		return m_OrderPlanner.ReconcileAICommanderOrder(
+		s_iZcrSelectMs += System.GetTickCount() - zcrMark;
+		zcrMark = System.GetTickCount();
+		bool zcrResult = m_OrderPlanner.ReconcileAICommanderOrder(
 			slot,
 			m_Faction,
 			m_ObjectiveGraph,
@@ -170,7 +175,14 @@ class AICF_AICommander
 			stableCandidateMs,
 			waypointSuspendedByVehicle,
 			decision);
+		s_iZcrPlanMs += System.GetTickCount() - zcrMark;
+		return zcrResult;
 	}
+
+	// ZCR (22 Oct): where a reconcile's time goes (COMMANDER_TICK_COST prep_ms= select_ms= plan_ms=).
+	static int s_iZcrPrepMs;
+	static int s_iZcrSelectMs;
+	static int s_iZcrPlanMs;
 
 	bool AssignLossResponseOrder(
 		AICF_GroupSlot slot,
