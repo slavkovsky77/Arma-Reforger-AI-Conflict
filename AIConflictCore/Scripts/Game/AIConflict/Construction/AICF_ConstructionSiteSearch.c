@@ -302,7 +302,9 @@ class AICF_ConstructionSiteSearch
 		{
 			array<vector> points = {};
 			road.GetPoints(points);
-			float away = road.GetWidth() * 0.5 + 2 + extent;
+			// 4 and 10 m clear of the road's edge (the footprint's half-diagonal more from the centre line): at 2 m, 26% of
+			// the roadside tries failed AI Conflict's own road clearance (half the width + 3 m) or DEPOT_ON_ROAD (22 Oct).
+			float away = road.GetWidth() * 0.5 + 4 + extent;
 			for (int i = 1; i < points.Count() && order.m_aRoadSeeds.Count() < 400; i++)
 			{
 				vector from = points[i - 1];
@@ -319,11 +321,14 @@ class AICF_ConstructionSiteSearch
 					vector at = from + dir * along;
 					for (int sideOf = -1; sideOf <= 1; sideOf += 2)
 					{
-						vector seed = at + across * (away * sideOf);
-						if (vector.DistanceXZ(seed, center) > inside)
-							continue;
-						order.m_aRoadSeeds.Insert(seed);
-						order.m_aRoadSeedYaws.Insert(roadYaw);
+						for (int ring; ring < 2; ring++)
+						{
+							vector seed = at + across * ((away + ring * 6) * sideOf);
+							if (vector.DistanceXZ(seed, center) > inside)
+								continue;
+							order.m_aRoadSeeds.Insert(seed);
+							order.m_aRoadSeedYaws.Insert(roadYaw);
+						}
 					}
 				}
 			}
