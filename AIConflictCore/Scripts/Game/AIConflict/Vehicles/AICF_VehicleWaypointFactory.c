@@ -110,7 +110,10 @@ class AICF_VehicleWaypointFactory
 	AIWaypoint CreateLogisticsWaypoint(vector endpoint)
 	{
 		AIWaypoint waypoint = SpawnWaypoint(MOVE_WAYPOINT_PREFAB, endpoint);
-		if (waypoint) waypoint.SetCompletionRadius(3);
+		// ZCR (22 Oct): 8 m (was 3) - a truck that drove past a 3-m point (its depot's exit 12 m ahead, most often) had to
+		// turn back to it, and the game's driver can't reach a point behind it: UNREACHABLE, the driver gets out
+		// (Everon w13: 13 of 23 failed truck moves). Arrival at a load/unload point is still the worker's 15 m.
+		if (waypoint) waypoint.SetCompletionRadius(8);
 		return waypoint;
 	}
 

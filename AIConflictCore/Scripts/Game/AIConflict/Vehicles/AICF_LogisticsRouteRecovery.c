@@ -109,7 +109,10 @@ class AICF_LogisticsRouteRecovery
 			m_bAwaitingRelocationMotion = false;
 			w.Log("LOGISTICS_RECOVERY_SUCCEEDED", string.Format("reason=PHYSICAL_MOTION_AND_ROUTE_PROGRESS attempt=%1 displacement_m=%2 route_endpoint=%3 route_progress_m=%4", w.m_iRouteRetries, vector.DistanceXZ(position, m_vAttemptPosition), m_vRoute, m_fAttemptDistance - vector.DistanceXZ(position, m_vRoute)));
 		}
-		if (m_bSpawnEgress && !m_bActive && vector.DistanceXZ(position, m_vRoute) <= 5)
+		// ZCR (22 Oct): within 12 m (was 5), or past it - polled once a second, at the lab's 3x a truck covers ~16 m
+		// between polls and drove through the 5-m window, then had to turn back to its depot's exit.
+		bool zcrPassedExit = vector.DistanceXZ(position, w.m_aSpawnTransform[3]) > vector.DistanceXZ(m_vRoute, w.m_aSpawnTransform[3]) + 2;
+		if (m_bSpawnEgress && !m_bActive && (vector.DistanceXZ(position, m_vRoute) <= 12 || zcrPassedExit))
 		{
 			m_bSpawnEgress = false;
 			w.m_bSpawnExitReached = true;
