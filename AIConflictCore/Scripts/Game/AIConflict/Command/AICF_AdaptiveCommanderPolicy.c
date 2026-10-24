@@ -214,7 +214,7 @@ class AICF_AdaptiveCommanderPolicy
 				candidate.m_fFrontValue = Math.Min(AICF_AdaptiveCommanderConfig.MAX_FRONT_VALUE, candidate.m_iOpenDirections * AICF_AdaptiveCommanderConfig.FRONT_VALUE_PER_EXIT);
 				if (slot.GetRole() == AICF_EGroupRole.ATTACK)
 				{
-					if (usableAttack && AICF_GroupRuntime.CountAliveAgents(slot.GetGroup()) >= AICF_AdaptiveCommanderConfig.MIN_ATTACK_ALIVE)
+					if (usableAttack && AICF_GroupRuntime.CountAliveAgents(slot.GetGroup()) >= AICF_AdaptiveScore.MinAttackAlive())
 						candidate.m_fFrontValue = -AICF_AdaptiveCommanderConfig.ATTACK_HOLD_COST;
 				}
 			}

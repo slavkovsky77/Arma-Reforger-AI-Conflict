@@ -759,10 +759,13 @@ class AICF_InfantryRecruitmentService
 				return string.Empty;
 			if (m_iAvailableAgents <= 0)
 				return "AGENT_LIMIT";
+			// The side is at its cap: the order ends, so the team musters with whom it has and sets out (an open order
+			// kept every team at its barracks - RefreshInfantryMuster waits for open orders; 24 Oct, all 12 attack teams
+			// of a side stayed at their main base for a whole match).
 			if (order.m_Faction == m_AllowanceUS && m_iUSAllowance == 0)
-				return string.Empty;   // the side is at its cap: the order waits (a loss frees a place)
+				return "FACTION_LIMIT";
 			if (order.m_Faction == m_AllowanceUSSR && m_iUSSRAllowance == 0)
-				return string.Empty;
+				return "FACTION_LIMIT";
 			order.m_iLoadoutRevision = order.m_Slot.GetLoadoutRevision();
 			if (!m_Spawner.BeginRecruit(order))
 				return "SPAWN_REJECTED";

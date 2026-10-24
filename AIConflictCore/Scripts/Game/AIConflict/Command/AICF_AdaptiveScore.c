@@ -44,9 +44,16 @@ class AICF_AdaptiveScore
 	float m_fContinuation;
 	float m_fTotal;
 
+	// ZCR: a team that may set out (AICF_Stage1Config.MusterSize) may attack - with -aicfMusterSize 2 and the per-side cap,
+	// teams of 2 scored no attack at all and every attack team guarded its own base all match (24 Oct).
+	static int MinAttackAlive()
+	{
+		return Math.Min(AICF_AdaptiveCommanderConfig.MIN_ATTACK_ALIVE, AICF_Stage1Config.MusterSize());
+	}
+
 	static float EffectiveForce(bool ready, int alive, int desired)
 	{
-		if (!ready || alive < AICF_AdaptiveCommanderConfig.MIN_ATTACK_ALIVE)
+		if (!ready || alive < MinAttackAlive())
 			return 0;
 		float ratio = Math.Clamp(alive / Math.Max(1.0, desired), 0.0, 1.0);
 		return alive * Math.Clamp(ratio, 0.5, 1.0);
@@ -59,7 +66,7 @@ class AICF_AdaptiveScore
 			!candidate.m_bAvailable || candidate.m_bDeferred)
 			return score;
 		if (candidate.m_bAttack && (squad.m_Role != AICF_EGroupRole.ATTACK ||
-			squad.m_iAlive < AICF_AdaptiveCommanderConfig.MIN_ATTACK_ALIVE))
+			squad.m_iAlive < MinAttackAlive()))
 			return score;
 		score.m_bEligible = true;
 		bool freshThreat = candidate.m_bThreat && now >= candidate.m_iThreatAtMs &&
