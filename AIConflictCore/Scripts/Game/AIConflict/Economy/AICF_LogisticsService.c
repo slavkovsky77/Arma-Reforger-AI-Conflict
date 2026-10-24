@@ -104,6 +104,7 @@ class AICF_LogisticsService
 			foreach (AICF_LogisticsWorker report : m_Registry.m_aWorkers) AICF_LogisticsLedger.LogBalance(report);
 		}
 		m_MapMarkers.Sync(m_Registry.m_aWorkers, now);
+		AICF_LogisticsLookup.Update(m_Registry.m_aWorkers);   // ZCR: vehicle -> worker, for the watched game's tags
 	}
 
 	// ZCR: automatic dispatch on unless -aicfLogisticsManualOnly.
