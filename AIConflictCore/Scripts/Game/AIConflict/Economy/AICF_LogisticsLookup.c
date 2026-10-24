@@ -15,6 +15,16 @@ class AICF_LogisticsLookup
 		}
 	}
 
+	// Every worker with a vehicle (the watched game's live map, ZCR_LiveMap).
+	static void All(notnull array<AICF_LogisticsWorker> into)
+	{
+		foreach (IEntity v, AICF_LogisticsWorker w : s_mByVehicle)
+		{
+			if (v && w)
+				into.Insert(w);
+		}
+	}
+
 	static AICF_LogisticsWorker Get(IEntity vehicle)
 	{
 		if (!vehicle)
