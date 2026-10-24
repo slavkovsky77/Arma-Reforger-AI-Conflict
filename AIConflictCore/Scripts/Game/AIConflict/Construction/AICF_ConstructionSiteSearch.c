@@ -1086,6 +1086,21 @@ class AICF_ConstructionSiteSearch
 			order.m_sReason = "DEPOT_FAR_FROM_ROAD";
 			return false;
 		}
+		// ZCR (24 Oct, report 27 / note 386): a straight drive from the depot to a road (AICF_DepotAccess) - also for the
+		// forced first depot when any road is within reach (the Farm's walled pasture depot was one); not once it stands
+		// (the completion check excludes its own composition, which would block the sweep).
+		if (!m_ExcludedRoot && AICF_DepotAccess.Enabled())
+		{
+			vector road;
+			string blocker;
+			int tried;
+			if (AICF_DepotAccess.RoadReachable(center, AICF_DepotAccess.REACH_M, road, blocker, tried) == 0)
+			{
+				order.m_sReason = "DEPOT_NO_ROAD_ACCESS";
+				order.m_sObstacle = blocker;
+				return false;
+			}
+		}
 		return true;
 	}
 
