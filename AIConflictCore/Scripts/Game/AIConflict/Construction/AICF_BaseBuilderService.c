@@ -340,6 +340,23 @@ class AICF_BaseBuilderService
 			if (receipt && receipt.m_bAccepted && receipt.m_bPathStartReady && receipt.m_Base == builder.m_Base &&
 				receipt.m_Faction == faction && receipt.IdentityValid() && receipt.PlacementUnchanged())
 				position = receipt.m_vPathStart;
+			// Builders per side at most (-aicfMaxBuildersPerFaction; ZCR lab 24 Oct: on Everon a builder at every base with
+			// work - 59 builder characters in a match, on top of the 50-a-side squads - FPS 20).
+			string capText;
+			if (System.GetCLIParam("aicfMaxBuildersPerFaction", capText) && capText.ToInt() > 0)
+			{
+				int working;
+				foreach (AICF_BaseBuilder other : m_aBuilders)
+				{
+					if (other != builder && other.m_Group && other.m_Faction == faction)
+						working++;
+				}
+				if (working >= capText.ToInt())
+				{
+					builder.m_iRetryAtMs = now + BLOCKED_RETRY_MS;
+					return;
+				}
+			}
 			builder.m_iRetryAtMs = now + RETRY_DELAY_MS;
 			builder.m_Group = m_Spawner.CreateBuilder(faction, position);
 			if (!builder.m_Group)
