@@ -681,6 +681,7 @@ class AICF_VehicleTaskHandoff
 
 	void ClearLogisticsWaypoint(AICF_LogisticsWorker w)
 	{
+		AICF_RoadGraph.Unroute(w);   // ZCR: the road route's waypoints go with it
 		if (!w || !w.m_Waypoint) return;
 		AIWaypoint waypoint = w.m_Waypoint;
 		if (waypoint.GetID() != w.m_WaypointId) return;
@@ -702,6 +703,7 @@ class AICF_VehicleTaskHandoff
 		w.m_Waypoint = waypoint;
 		w.m_WaypointId = waypoint.GetID();
 		w.m_Group.AddWaypointAt(waypoint, 0);
+		AICF_RoadGraph.RouteWorker(w, waypoint);   // ZCR (25 Oct): the road route ahead of it (AICF_RoadGraph)
 		array<AIWaypoint> queue = {};
 		w.m_Group.GetWaypoints(queue);
 		return queue.Contains(waypoint);

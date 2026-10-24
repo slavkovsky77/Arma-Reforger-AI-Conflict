@@ -119,6 +119,7 @@ class AICF_LogisticsWorker
 	bool m_bCleanupQueued;
 	AICF_ELogisticsPhase m_ePhase;
 	AIWaypoint m_Waypoint;
+	ref array<AIWaypoint> m_aRouteWaypoints = {};   // ZCR: the road route's waypoints ahead of m_Waypoint (AICF_RoadGraph)
 	EntityID m_WaypointId = EntityID.INVALID;
 	vector m_vEndpoint;
 	vector m_vProgressPosition;
