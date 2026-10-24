@@ -19,6 +19,19 @@ class AICF_InfantryRecruitmentService
 	protected ref array<ref AICF_RecruitmentApproachFailure> m_aApproachFailures = {};
 	protected int m_iNextToken = 1;
 	protected int m_iAvailableAgents;
+	// The per-side cap's allowance this pass (-aicfMaxAgentsPerFaction; -1: none).
+	protected int m_iUSAllowance = -1;
+	protected int m_iUSSRAllowance = -1;
+	protected SCR_CampaignFaction m_AllowanceUS;
+	protected SCR_CampaignFaction m_AllowanceUSSR;
+
+	void SetFactionAllowance(int us, int ussr, SCR_CampaignFaction usFaction, SCR_CampaignFaction ussrFaction)
+	{
+		m_iUSAllowance = Math.Max(0, us);
+		m_iUSSRAllowance = Math.Max(0, ussr);
+		m_AllowanceUS = usFaction;
+		m_AllowanceUSSR = ussrFaction;
+	}
 	protected bool m_bStopped;
 
 	void AICF_InfantryRecruitmentService(SCR_GameModeCampaign campaign, AICF_OrderPlanner planner,
@@ -746,10 +759,18 @@ class AICF_InfantryRecruitmentService
 				return string.Empty;
 			if (m_iAvailableAgents <= 0)
 				return "AGENT_LIMIT";
+			if (order.m_Faction == m_AllowanceUS && m_iUSAllowance == 0)
+				return string.Empty;   // the side is at its cap: the order waits (a loss frees a place)
+			if (order.m_Faction == m_AllowanceUSSR && m_iUSSRAllowance == 0)
+				return string.Empty;
 			order.m_iLoadoutRevision = order.m_Slot.GetLoadoutRevision();
 			if (!m_Spawner.BeginRecruit(order))
 				return "SPAWN_REJECTED";
 			m_iAvailableAgents--;
+			if (order.m_Faction == m_AllowanceUS && m_iUSAllowance > 0)
+				m_iUSAllowance--;
+			else if (order.m_Faction == m_AllowanceUSSR && m_iUSSRAllowance > 0)
+				m_iUSSRAllowance--;
 			order.Log("INFANTRY_RECRUIT_SPAWN_REQUESTED", string.Format(
 				"role=%1 prefab=%2 cost=%3 donor=%4 paid=0", order.m_sRole, order.m_sPrefab, order.m_iCost, order.m_DonorId));
 			return string.Empty;

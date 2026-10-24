@@ -85,6 +85,7 @@ class AICF_Stage1Config
 	protected int m_iReinforcementDelayMs;
 	protected int m_iCommanderIntervalMs;
 	protected int m_iMaxManagedAgents;
+	protected int m_iMaxAgentsPerFaction;   // 0: no per-side cap (ZCR lab, 24 Oct: -aicfMaxAgentsPerFaction 50)
 	protected int m_iWarTempoPercent;
 	protected FactionKey m_sExpectedPlayerFaction;
 	protected string m_sAICommanderMode;
@@ -153,6 +154,13 @@ class AICF_Stage1Config
 	void SetCommanderIntervalMs(int value)
 	{
 		m_iCommanderIntervalMs = ClampInt(value, MIN_COMMANDER_INTERVAL_MS, MAX_COMMANDER_INTERVAL_MS);
+	}
+
+	// Soldiers per side at most (0: none): squads and recruits wait while their side is at it. Martin, 24 Oct: "maybe 150
+	// soldiers is too much - we should cap it; start with 50 vs 50" (FPS fell from ~37 at 125 AI soldiers to ~17 at 240).
+	int GetMaxAgentsPerFaction()
+	{
+		return m_iMaxAgentsPerFaction;
 	}
 
 	int GetMaxManagedAgents()
@@ -266,6 +274,8 @@ class AICF_Stage1Config
 			SetCommanderIntervalMs(value.ToInt());
 		if (System.GetCLIParam("aicfMaxManagedAgents", value))
 			SetMaxManagedAgents(value.ToInt());
+		if (System.GetCLIParam("aicfMaxAgentsPerFaction", value))
+			m_iMaxAgentsPerFaction = ClampInt(value.ToInt(), 0, MAX_MANAGED_AGENTS);
 		if (System.GetCLIParam("aicfExpectedPlayerFaction", value))
 			SetExpectedPlayerFaction(value);
 		if (System.GetCLIParam("aicfAICommanderMode", value))

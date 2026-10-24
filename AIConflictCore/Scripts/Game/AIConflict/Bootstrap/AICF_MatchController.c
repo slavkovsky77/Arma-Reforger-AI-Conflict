@@ -1561,6 +1561,10 @@ class AICF_MatchController
 		ProcessFaction(m_USSRState, m_USSRFaction);
 		if (m_bRosterReady && m_InfantryRecruitment)
 		{
+			int cap = m_Config.GetMaxAgentsPerFaction();
+			if (cap > 0)
+				m_InfantryRecruitment.SetFactionAllowance(cap - CountProjectedFactionAgents(m_USState, null),
+					cap - CountProjectedFactionAgents(m_USSRState, null), m_USFaction, m_USSRFaction);
 			m_InfantryRecruitment.Update(m_USState, m_USFaction, m_USSRState, m_USSRFaction,
 				m_Config.GetMaxManagedAgents() - CountProjectedManagedAgentsForSpawn(null),
 				!m_bReplanScheduled && !m_bGraphRebuildNeeded);
@@ -1913,6 +1917,20 @@ class AICF_MatchController
 		int managedAgents = CountManagedAgents();
 		int projectedManagedAgents = CountProjectedManagedAgentsForSpawn(slot);
 		int managedAgentLimit = m_Config.GetMaxManagedAgents();
+		// The per-side cap (-aicfMaxAgentsPerFaction): this side's soldiers and reservations with this squad.
+		int factionCap = m_Config.GetMaxAgentsPerFaction();
+		if (factionCap > 0 && CountProjectedFactionAgents(factionState, slot) > factionCap)
+		{
+			slot.PostponeReinforcementUntil(nowMs + GetReplacementRetryMs());
+			if (slot.MarkAgentLimitBlockReported())
+			{
+				AICF_Stage1Diagnostics.Warning(
+					"REINFORCEMENT_BLOCKED",
+					string.Format("faction=%1 slot=%2 projected_faction_agents=%3 limit=%4 reason=FACTION_LIMIT",
+						faction.GetFactionKey(), slot.GetSlotKey(), CountProjectedFactionAgents(factionState, slot), factionCap));
+			}
+			return;
+		}
 		if (projectedManagedAgents > managedAgentLimit)
 		{
 			slot.PostponeReinforcementUntil(nowMs + GetReplacementRetryMs());
