@@ -105,12 +105,63 @@ class AICF_BaseStorage
 	}
 
 	// A level spot (corners within 0.8 m of each other over 8 m) with nothing standing within 4 m.
+	// ZCR (25 Oct - Martin, watching the base-building sub-lab: "I noticed one supply depot being built on the road"): Moss
+	// Hill's cache stood on the road 60 m from the base's centre (1.4 m inside the road's edge). First a spot 10 m clear
+	// of every road's edge, out to 90 m; only if there is none, the old rule (a base without a store has a dead economy).
+	// Moss Hill (a hilltop farm ringed by roads) has no level, clear spot 10 m off the roads within 90 m: then 8 m off with
+	// a little more slope out to 150 m, then 6 m (the cache's half-diagonal is 5.6 m - its corner at the road's edge).
 	protected static bool FindSpot(vector centre, out vector spot)
 	{
+		if (FindSpotWith(centre, spot, 10, 0.8, 90))
+			return true;
+		if (FindSpotWith(centre, spot, 8, 1.2, 150))
+			return true;
+		if (FindSpotWith(centre, spot, 6, 1.2, 150))
+			return true;
+		AICF_Stage1Diagnostics.Info("BASE_STORAGE_NEAR_ROAD", string.Format("x=%1 z=%2 reason=NO_SPOT_OFF_ROAD", Math.Round(centre[0]), Math.Round(centre[2])));
+		return FindSpotWith(centre, spot, 0, 0.8, 60);
+	}
+
+	protected static bool ClearOfRoads(vector p, float clearM)
+	{
+		ChimeraAIWorld aiWorld = ChimeraAIWorld.Cast(GetGame().GetAIWorld());
+		if (!aiWorld || !aiWorld.GetRoadNetworkManager())
+			return true;
+		array<BaseRoad> roads = {};
+		float reach = clearM + 15;
+		aiWorld.GetRoadNetworkManager().GetRoadsInAABB(p - Vector(reach, 60, reach), p + Vector(reach, 60, reach), roads);
+		foreach (BaseRoad road : roads)
+		{
+			array<vector> points = {};
+			road.GetPoints(points);
+			float half = road.GetWidth() * 0.5;
+			for (int i = 1; i < points.Count(); i++)
+			{
+				vector a = points[i - 1];
+				vector b = points[i];
+				float dx = b[0] - a[0];
+				float dz = b[2] - a[2];
+				float len = dx * dx + dz * dz;
+				float f = 0;
+				if (len > 0)
+					f = Math.Clamp(((p[0] - a[0]) * dx + (p[2] - a[2]) * dz) / len, 0, 1);
+				float ex = p[0] - (a[0] + f * dx);
+				float ez = p[2] - (a[2] + f * dz);
+				if (Math.Sqrt(ex * ex + ez * ez) - half < clearM)
+					return false;
+			}
+		}
+		return true;
+	}
+
+	protected static bool FindSpotWith(vector centre, out vector spot, float roadClearM, float slopeM, float farM)
+	{
 		BaseWorld world = GetGame().GetWorld();
-		array<float> dists = {8, 14, 20, 28, 36, 46, 60};
+		array<float> dists = {8, 14, 20, 28, 36, 46, 60, 75, 90, 105, 120, 135, 150};
 		foreach (float d : dists)
 		{
+			if (d > farM)
+				break;
 			for (int a = 0; a < 12; a++)
 			{
 				float r = a * 30 * Math.DEG2RAD;
@@ -126,7 +177,9 @@ class AICF_BaseStorage
 					lo = Math.Min(lo, h);
 					hi = Math.Max(hi, h);
 				}
-				if (hi - lo > 0.8)
+				if (hi - lo > slopeM)
+					continue;
+				if (roadClearM > 0 && !ClearOfRoads(p, roadClearM))
 					continue;
 				s_aNear = {};
 				world.QueryEntitiesBySphere(p + Vector(0, 1, 0), 4, Near, null, EQueryEntitiesFlags.ALL);
