@@ -23,6 +23,19 @@ class AICF_BaseBuilderService
 	protected int m_iCombatBudget;
 	protected int m_iNextSlotId = AICF_Stage1Config.GROUP_SLOTS_PER_FACTION;
 
+	// ZCR: the builders now, for the lab's build test camera and the Lab app's live map (25 Oct - Martin: "I want to test
+	// building of the base by the infantry guys and look at it").
+	static void ZCR_Builders(notnull array<AICF_BaseBuilder> into)
+	{
+		if (!s_Instance)
+			return;
+		foreach (AICF_BaseBuilder b : s_Instance.m_aBuilders)
+		{
+			if (b)
+				into.Insert(b);
+		}
+	}
+
 	void Start(SCR_GameModeCampaign campaign, AICF_OrderPlanner planner, int combatBudget)
 	{
 		if (!Replication.IsServer() || !campaign || !campaign.IsMaster() || !planner)
