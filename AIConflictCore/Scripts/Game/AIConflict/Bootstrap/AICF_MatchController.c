@@ -1563,8 +1563,10 @@ class AICF_MatchController
 		{
 			int cap = m_Config.GetMaxAgentsPerFaction();
 			if (cap > 0)
-				m_InfantryRecruitment.SetFactionAllowance(cap - CountProjectedFactionAgents(m_USState, null),
-					cap - CountProjectedFactionAgents(m_USSRState, null), m_USFaction, m_USSRFaction);
+				m_InfantryRecruitment.SetFactionAllowance(
+					cap - CountProjectedFactionAgents(m_USState, null) - CountFactionSupportAgents(m_USState, m_USFaction),
+					cap - CountProjectedFactionAgents(m_USSRState, null) - CountFactionSupportAgents(m_USSRState, m_USSRFaction),
+					m_USFaction, m_USSRFaction);
 			m_InfantryRecruitment.Update(m_USState, m_USFaction, m_USSRState, m_USSRFaction,
 				m_Config.GetMaxManagedAgents() - CountProjectedManagedAgentsForSpawn(null),
 				!m_bReplanScheduled && !m_bGraphRebuildNeeded);
@@ -1919,7 +1921,7 @@ class AICF_MatchController
 		int managedAgentLimit = m_Config.GetMaxManagedAgents();
 		// The per-side cap (-aicfMaxAgentsPerFaction): this side's soldiers and reservations with this squad.
 		int factionCap = m_Config.GetMaxAgentsPerFaction();
-		if (factionCap > 0 && CountProjectedFactionAgents(factionState, slot) > factionCap)
+		if (factionCap > 0 && CountProjectedFactionAgents(factionState, slot) + CountFactionSupportAgents(factionState, faction) > factionCap)
 		{
 			slot.PostponeReinforcementUntil(nowMs + GetReplacementRetryMs());
 			if (slot.MarkAgentLimitBlockReported())
@@ -7189,6 +7191,52 @@ class AICF_MatchController
 				count++;
 		}
 		return count;
+	}
+
+	// -aicfCapCountsAll: the side's other AI soldiers alive (builders, truck crews, drone operators, armour crews - not in
+	// its squad slots) count against -aicfMaxAgentsPerFaction too (ZCR lab 24 Oct: with squads capped at 50 a side, Everon
+	// still had ~150 AI soldiers - 25-35 a side of support - and FPS 19). Counted at most once a second.
+	protected int m_iSupportAtMs;
+	protected int m_iSupportUS;
+	protected int m_iSupportUSSR;
+
+	protected int CountFactionSupportAgents(AICF_FactionState factionState, SCR_CampaignFaction faction)
+	{
+		if (!faction || !System.IsCLIParam("aicfCapCountsAll"))
+			return 0;
+		int now = System.GetTickCount();
+		if (now - m_iSupportAtMs > 1000)
+		{
+			m_iSupportAtMs = now;
+			int us, ussr;
+			array<AIAgent> agents = {};
+			GetGame().GetAIWorld().GetAIAgents(agents);
+			foreach (AIAgent a : agents)
+			{
+				if (!a)
+					continue;
+				ChimeraCharacter c = ChimeraCharacter.Cast(a.GetControlledEntity());
+				if (!c)
+					continue;
+				CharacterControllerComponent ctl = c.GetCharacterController();
+				if (ctl && ctl.GetLifeState() == ECharacterLifeState.DEAD)
+					continue;
+				FactionAffiliationComponent aff = FactionAffiliationComponent.Cast(c.FindComponent(FactionAffiliationComponent));
+				if (!aff || !aff.GetAffiliatedFaction())
+					continue;
+				if (aff.GetAffiliatedFaction() == m_USFaction)
+					us++;
+				else if (aff.GetAffiliatedFaction() == m_USSRFaction)
+					ussr++;
+			}
+			m_iSupportUS = Math.Max(0, us - CountFactionAgents(m_USState));
+			m_iSupportUSSR = Math.Max(0, ussr - CountFactionAgents(m_USSRState));
+		}
+		if (faction == m_USFaction)
+			return m_iSupportUS;
+		if (faction == m_USSRFaction)
+			return m_iSupportUSSR;
+		return 0;
 	}
 
 	protected int CountProjectedManagedAgentsForSpawn(AICF_GroupSlot pendingSlot)
