@@ -102,8 +102,27 @@ class AICF_DepotAccess
 	static const float STEP_M = 6;
 	static const int MAX_CELLS = 250;
 
+	// The wooden pole fences (PoleFence_01) don't count: the vans from the Farm's depot spot 2124,2948 drove straight through
+	// that fence line to the road 47 m away, 6 of 6 (farm-depots sub-lab, 24 Oct); the wire fences (PoleFence_02), stone walls
+	// and buildings do. Against the vans of the sub-lab: the spots 2292,2927 and 2294,2982 refused (2 of 9 and 0 of 9 vans
+	// got out; the Farm's depot stood there in 8 of the last 13 Arland matches), 2124,2948 passed (6 of 6). The spot 2154,2909
+	// passes, but its vans (0 of 9) drive to a gap in the walls instead of the way out 30 m south-west - the game's route,
+	// not the ground. ~5-100 ms a spot.
+	static const string PASSABLE = "PoleFence_01";
+
 	static int WayOut(vector from, float reach, out vector road, out string blocker, out int cells, out int sweeps)
 	{
+		return WayOutWith(from, reach, STEP_M, PASSABLE, road, blocker, cells, sweeps);
+	}
+
+	// The same with another grid step, and objects whose prefab name contains 'ignore' left out (lab: which fences do vans
+	// push through?).
+	protected static string s_sIgnore;
+	static float s_fHalfWidth = 1.1;   // lab: the box's half width (the van's 1.1, the game's BTR-sized vehicle navmesh wider)
+
+	static int WayOutWith(vector from, float reach, float step, string ignore, out vector road, out string blocker, out int cells, out int sweeps)
+	{
+		s_sIgnore = ignore;
 		array<vector> points = {};
 		RoadPoints(from, reach, points);
 		if (points.IsEmpty())
@@ -115,7 +134,8 @@ class AICF_DepotAccess
 		array<float> openH = {Nearest(from, points, road)};
 		seen.Set(Key(0, 0), true);
 		float bestH = openH[0];
-		while (!openX.IsEmpty() && cells < MAX_CELLS)
+		int maxCells = MAX_CELLS * (STEP_M / step) * (STEP_M / step);
+		while (!openX.IsEmpty() && cells < maxCells)
 		{
 			int pick;
 			for (int i = 1; i < openH.Count(); i++)
@@ -130,9 +150,9 @@ class AICF_DepotAccess
 			openZ.Remove(pick);
 			openH.Remove(pick);
 			cells++;
-			vector at = from + Vector(cx * STEP_M, 0, cz * STEP_M);
+			vector at = from + Vector(cx * step, 0, cz * step);
 			vector near;
-			if (Nearest(at, points, near) <= STEP_M)
+			if (Nearest(at, points, near) <= Math.Max(step, 5))
 			{
 				road = near;
 				return 1;
@@ -148,7 +168,7 @@ class AICF_DepotAccess
 					int key = Key(nx, nz);
 					if (seen.Contains(key))
 						continue;
-					vector next = from + Vector(nx * STEP_M, 0, nz * STEP_M);
+					vector next = from + Vector(nx * step, 0, nz * step);
 					if (vector.DistanceXZ(next, from) > reach)
 						continue;
 					sweeps++;
@@ -230,8 +250,8 @@ class AICF_DepotAccess
 		b[1] = world.GetSurfaceY(b[0], b[2]) + 1.2;
 		trace.Start = a;
 		trace.End = b;
-		trace.Mins = Vector(-1.1, -0.9, -1.1);
-		trace.Maxs = Vector(1.1, 0.6, 1.1);
+		trace.Mins = Vector(-s_fHalfWidth, -0.9, -s_fHalfWidth);
+		trace.Maxs = Vector(s_fHalfWidth, 0.6, s_fHalfWidth);
 		trace.Flags = TraceFlags.ENTS;
 		trace.LayerMask = EPhysicsLayerPresets.Projectile;
 		float reached = world.TraceMove(trace, Solid);
@@ -248,6 +268,8 @@ class AICF_DepotAccess
 		if (entity.IsInherited(ChimeraCharacter) || entity.IsInherited(Vehicle))
 			return false;
 		if (root && (root.IsInherited(ChimeraCharacter) || root.IsInherited(Vehicle)))
+			return false;
+		if (!s_sIgnore.IsEmpty() && entity.GetPrefabData() && entity.GetPrefabData().GetPrefabName().Contains(s_sIgnore))
 			return false;
 		return true;
 	}
