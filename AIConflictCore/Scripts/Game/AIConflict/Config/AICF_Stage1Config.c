@@ -73,6 +73,24 @@ class AICF_Stage1Config
 	static const int MIN_MANAGED_AGENTS = 200;
 	static const int MAX_MANAGED_AGENTS = 256;
 
+	// ZCR (25 Oct): fewer teams a side (-aicfSquadsPerSide N, 2-20; default 20, as before). The FPS sub-lab found the
+	// watched game's frame rate set by the speed and the number of soldiers (teams of 1 instead of 2: +6.5 fps at 3x),
+	// and every side spawns all its teams at the start whatever the agent caps. GROUP_SLOTS_PER_FACTION stays the id
+	// space (builders' and trucks' slot ids start after it).
+	protected static int s_iSquadsPerSide = -1;
+
+	static int SquadsPerSide()
+	{
+		if (s_iSquadsPerSide < 0)
+		{
+			s_iSquadsPerSide = GROUP_SLOTS_PER_FACTION;
+			string value;
+			if (System.GetCLIParam("aicfSquadsPerSide", value) && value.ToInt() > 0)
+				s_iSquadsPerSide = Math.ClampInt(value.ToInt(), 2, GROUP_SLOTS_PER_FACTION);
+		}
+		return s_iSquadsPerSide;
+	}
+
 	static int GetDefaultGroupSizeForSlot(int slotId)
 	{
 		if (slotId >= 0 && slotId < DEFAULT_FULL_SIZE_GROUPS_PER_FACTION)

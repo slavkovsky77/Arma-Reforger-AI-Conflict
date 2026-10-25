@@ -320,7 +320,7 @@ class AICF_MatchController
 				m_Config.GetCommanderIntervalMs(),
 				m_Config.GetReinforcementDelayMs(),
 				m_Config.GetInitialTickets(),
-				AICF_Stage1Config.GROUP_SLOTS_PER_FACTION,
+				AICF_Stage1Config.SquadsPerSide(),
 				m_Config.GetReplacementTicketCost(),
 				m_Config.GetMaxManagedAgents(),
 				expectedPlayerFaction,
@@ -6554,8 +6554,8 @@ class AICF_MatchController
 		if (m_bRosterReady || !m_USState || !m_USSRState)
 			return;
 
-		if (m_USState.CountSlotsByState(AICF_EGroupSlotState.READY) != AICF_Stage1Config.GROUP_SLOTS_PER_FACTION ||
-			m_USSRState.CountSlotsByState(AICF_EGroupSlotState.READY) != AICF_Stage1Config.GROUP_SLOTS_PER_FACTION)
+		if (m_USState.CountSlotsByState(AICF_EGroupSlotState.READY) != AICF_Stage1Config.SquadsPerSide() ||
+			m_USSRState.CountSlotsByState(AICF_EGroupSlotState.READY) != AICF_Stage1Config.SquadsPerSide())
 			return;
 
 		m_bRosterReady = true;

@@ -80,7 +80,7 @@ class AICF_FactionState
 	// WAITING и replacement SPAWNING сохраняют обычную платную recovery цепочку.
 	bool IsInitialSpawnQueueSettled()
 	{
-		if (m_aGroupSlots.Count() != AICF_Stage1Config.GROUP_SLOTS_PER_FACTION)
+		if (m_aGroupSlots.Count() != AICF_Stage1Config.SquadsPerSide())
 			return false;
 		for (int slotIndex; slotIndex < m_aGroupSlots.Count(); slotIndex++)
 		{
@@ -210,11 +210,20 @@ class AICF_FactionState
 			attackSlots = AICF_Stage1Config.LEGACY_ATTACK_SLOTS_PER_FACTION;
 			defendSlots = AICF_Stage1Config.LEGACY_DEFEND_SLOTS_PER_FACTION;
 		}
+		// ZCR: fewer teams (-aicfSquadsPerSide) - attackers and defenders in the same proportion, at least one of each.
+		int squads = AICF_Stage1Config.SquadsPerSide();
+		if (squads < AICF_Stage1Config.GROUP_SLOTS_PER_FACTION)
+		{
+			float share = squads;
+			share = share / AICF_Stage1Config.GROUP_SLOTS_PER_FACTION;
+			attackSlots = Math.Max(1, Math.Round(attackSlots * share));
+			defendSlots = Math.Max(1, Math.Min(squads - attackSlots, Math.Round(defendSlots * share)));
+		}
 
 		int attackIndex;
 		int defendIndex;
 		int reserveIndex;
-		for (int slotId = 0; slotId < AICF_Stage1Config.GROUP_SLOTS_PER_FACTION; slotId++)
+		for (int slotId = 0; slotId < squads; slotId++)
 		{
 			AICF_EGroupRole role = AICF_EGroupRole.RESERVE;
 			int roleIndex;
