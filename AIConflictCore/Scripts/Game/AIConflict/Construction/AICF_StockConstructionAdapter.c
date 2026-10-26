@@ -177,6 +177,62 @@ class AICF_StockConstructionAdapter
 	}
 }
 
+// ZCR (26 Oct, Martin: "vehicle depot not being finished"): a finished building waits while anyone stands in its
+// footprint, and the base's defenders at their post kept the US vehicle depot at 1706, 914 unfinished for the rest
+// of the match (15 waits). Live AI soldiers in the footprint (not players, not in a vehicle) step out to its edge,
+// 2 m past the corner circle, on the side where they stand.
+class AICF_ZcrFootprintClear
+{
+	protected ref array<IEntity> m_aFound = {};
+
+	int Run(AICF_ConstructionOrder receipt, IEntity building)
+	{
+		if (!receipt || !receipt.m_Metadata || !building)
+			return 0;
+		vector transform[4];
+		building.GetWorldTransform(transform);
+		vector mins, maxs;
+		AICF_ConstructionSiteSearch.Bounds(receipt, transform, 1.0, mins, maxs);
+		vector centre = (mins + maxs) * 0.5;
+		float radius = vector.DistanceXZ(mins, maxs) * 0.5 + 2;
+		m_aFound.Clear();
+		BaseWorld world = GetGame().GetWorld();
+		world.QueryEntitiesBySphere(centre, radius + 3, Collect, null, EQueryEntitiesFlags.DYNAMIC);
+		int moved;
+		foreach (IEntity e : m_aFound)
+		{
+			ChimeraCharacter man = ChimeraCharacter.Cast(e);
+			if (!man || CompartmentAccessComponent.GetVehicleIn(man))
+				continue;
+			if (GetGame().GetPlayerManager().GetPlayerIdFromControlledEntity(man) > 0)
+				continue;
+			vector p = man.GetOrigin();
+			if (p[0] < mins[0] || p[0] > maxs[0] || p[2] < mins[2] || p[2] > maxs[2])
+				continue;
+			vector dir = p - centre;
+			dir[1] = 0;
+			if (dir.LengthSq() < 0.01)
+				dir = Vector(1, 0, 0);
+			dir.Normalize();
+			vector to = centre + dir * radius;
+			to[1] = world.GetSurfaceY(to[0], to[2]);
+			vector moveTo[4];
+			man.GetWorldTransform(moveTo);
+			moveTo[3] = to;
+			man.Teleport(moveTo);
+			moved++;
+		}
+		return moved;
+	}
+
+	protected bool Collect(IEntity entity)
+	{
+		if (AICF_GroupRuntime.IsAliveCharacter(entity))
+			m_aFound.Insert(entity);
+		return true;
+	}
+}
+
 modded class SCR_CampaignBuildingLayoutComponent
 {
 	bool AICF_CompletionClear()
@@ -189,11 +245,22 @@ modded class SCR_CampaignBuildingLayoutComponent
 			return true;
 		AICF_ConstructionOrder receipt = composition.m_AICFConstructionReceipt;
 		bool clear = AICF_ConstructionSiteSearch.CompletionClear(receipt);
+		// ZCR (26 Oct): AI soldiers standing in the footprint step out to its edge, then the check again.
+		int moved;
+		if (!clear && receipt.m_bTemporaryObstacle && receipt.m_Composition && receipt.m_Composition.GetOwner())
+		{
+			AICF_ZcrFootprintClear stepOut = new AICF_ZcrFootprintClear();
+			moved = stepOut.Run(receipt, receipt.m_Composition.GetOwner());
+			if (moved > 0)
+				clear = AICF_ConstructionSiteSearch.CompletionClear(receipt);
+		}
 		if (!clear && System.GetTickCount() - receipt.m_iLastBlockedAt >= 10000)
 		{
 			receipt.m_iLastBlockedAt = System.GetTickCount();
-			receipt.Log("CONSTRUCTION_COMPLETION_WAIT", "progress_added=0");
+			receipt.Log("CONSTRUCTION_COMPLETION_WAIT", string.Format("progress_added=0 obstacle=%1 stepped_out=%2", receipt.m_sObstacle, moved));
 		}
+		else if (moved > 0)
+			receipt.Log("CONSTRUCTION_FOOTPRINT_CLEARED", string.Format("stepped_out=%1", moved));
 		return clear;
 	}
 

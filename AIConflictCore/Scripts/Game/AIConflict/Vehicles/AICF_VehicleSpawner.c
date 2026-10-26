@@ -546,8 +546,11 @@ class AICF_VehicleSpawner
 			return false;
 		}
 		PurgeExpiredSiteReservations(nowMs);
-		if (!AICF_ConstructionPlanner.VehicleAreaClear(selection.m_vPosition, SPAWN_SEARCH_RADIUS_METERS))
+		if (!AICF_ConstructionPlanner.VehicleAreaClear(selection.m_vPosition, ZCR_BUILD_SITE_CLEARANCE_METERS))
+		{
+			ZcrPadWait(trip, "BUILD_SITE_NEAR", selection.m_vPosition);
 			return false;
+		}
 		foreach (AICF_VehicleSpawnSiteReservation active : s_aConstructionSites)
 		{
 			if (!active || active.IsExpired(nowMs))
@@ -555,6 +558,7 @@ class AICF_VehicleSpawner
 			if (vector.DistanceSqXZ(active.GetSpawnPosition(), selection.m_vPosition) <
 				SITE_RESERVATION_SEPARATION_METERS * SITE_RESERVATION_SEPARATION_METERS)
 			{
+				ZcrPadWait(trip, "PAD_RESERVED", selection.m_vPosition);
 				return false;
 			}
 		}
@@ -580,6 +584,29 @@ class AICF_VehicleSpawner
 		m_aSiteReservations.Insert(reservation);
 		s_aConstructionSites.Insert(reservation);
 		return true;
+	}
+
+	// ZCR (26 Oct): pads near a building site - 30 m from its footprint (was the 90 m search radius: the main base's
+	// builders work all match and the rides waited).
+	protected static const float ZCR_BUILD_SITE_CLEARANCE_METERS = 30.0;
+
+	protected void ZcrPadWait(AICF_TransportTrip trip, string why, vector at)
+	{
+		Print(string.Format("[ZCR][PAD] t=%1 faction=%2 slot=%3 wait=%4 x=%5 z=%6", Math.Round(GetGame().GetWorld().GetWorldTime() / 1000), trip.GetFactionKey(), trip.GetSlotId(),
+			why, Math.Round(at[0]), Math.Round(at[2])), LogLevel.NORMAL);
+	}
+
+	// ZCR (26 Oct): a spot within the separation of another team's reserved pad - skipped, the next free one is used.
+	protected bool ZcrPadTaken(vector p)
+	{
+		int nowMs = System.GetTickCount();
+		foreach (AICF_VehicleSpawnSiteReservation active : s_aConstructionSites)
+		{
+			if (active && !active.IsExpired(nowMs) &&
+				vector.DistanceSqXZ(active.GetSpawnPosition(), p) < SITE_RESERVATION_SEPARATION_METERS * SITE_RESERVATION_SEPARATION_METERS)
+				return true;
+		}
+		return false;
 	}
 
 	bool IsSiteReservationCurrent(
@@ -1554,6 +1581,8 @@ class AICF_VehicleSpawner
 		bool foundValidatedSurface;
 		for (int positionIndex; positionIndex < result.m_iCandidatePositionCount; positionIndex++)
 		{
+			if (ZcrPadTaken(positions[positionIndex]))
+				continue;
 			if (EvaluateAcquisitionPosition(
 				result,
 				faction,

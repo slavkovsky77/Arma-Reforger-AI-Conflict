@@ -363,7 +363,8 @@ class AICF_ContentProfile
 			int rides = s_mArmedRides.Get(stableKey) + 1;     // per side: the two sides' rides alternate
 			s_mArmedRides.Set(stableKey, rides);
 			int apcEvery = ApcEvery();
-			if (apcEvery > 0 && rides % apcEvery == 0)
+			bool apcFirst = apcEvery > 0 && rides % apcEvery == 0;
+			if (apcFirst)
 			{
 				// The armour mods' IFVs first when they're loaded (lab --armour): M2A2 Bradley, BMP-1.
 				if (stableKey == "US")
@@ -388,6 +389,15 @@ class AICF_ContentProfile
 			{
 				suffixes.Insert("Prefabs/Vehicles/Wheeled/UAZ469/UAZ469_PKM.et");
 				suffixes.Insert("Prefabs/Vehicles/Wheeled/Conflict_Variants/BRDM2_Conflict.et");
+			}
+			// ZCR (26 Oct): the APCs after the light ones in every armed list - those seat 4, and a team of 5-6 walked
+			// (INSUFFICIENT_COMPARTMENTS at once) unless the ride happened to be an APC one.
+			if (apcEvery > 0 && !apcFirst)
+			{
+				if (stableKey == "US")
+					suffixes.Insert("Prefabs/Vehicles/Wheeled/Conflict_Variants/LAV25_Conflict.et");
+				else if (stableKey == "USSR")
+					suffixes.Insert("Prefabs/Vehicles/Wheeled/Conflict_Variants/BTR70_Conflict.et");
 			}
 			return;
 		}
