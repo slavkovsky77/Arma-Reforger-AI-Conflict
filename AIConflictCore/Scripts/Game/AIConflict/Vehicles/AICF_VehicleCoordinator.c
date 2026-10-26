@@ -690,6 +690,11 @@ class AICF_VehicleCoordinator
 				return false;
 			}
 		}
+		if (ZcrRideCooling(assignment.GetFactionKey(), slot.GetSlotId()))
+		{
+			reason = "ZCR_RIDE_COOLDOWN";
+			return false;
+		}
 		int alive = AICF_GroupRuntime.CountAliveAgents(assignment.GetGroup());
 		if (alive < m_Config.GetMinimumVehicleRequestAgents())
 		{
@@ -836,6 +841,41 @@ class AICF_VehicleCoordinator
 			trip,
 			terminalOutcome,
 			ResolveTerminalFailureDomain(trip.GetPreviousPhase(), terminalOutcome));
+		if (trip.GetPhase() == AICF_ETransportTripPhase.FALLBACK)
+			ZcrRideFailed(trip.GetFactionKey(), trip.GetSlotId(), trip.GetTerminalReason());
+	}
+
+	// ZCR (26 Oct night): a team whose ride failed (boarding not done in time, the pad not reached, the vehicle stuck...)
+	// walks for the next 3 game minutes. It fell back to foot and, at its next order revision (the strategists revise
+	// often), asked for a ride again: request, spawn, boarding timeout, fallback, again - 60-80% of a side's assault
+	// soldiers still at their main base in minutes 5-20 (headless modern night, match 1: 310 requests, 262 vehicles).
+	// Real milliseconds like all of AI Conflict's clocks, divided by the lab's speed-up (-zcrSpeed); -aicfRideCooldownMs.
+	protected ref map<string, int> m_mZcrRideCooldownUntil = new map<string, int>();
+
+	protected static int ZcrRideCooldownMs()
+	{
+		string value;
+		if (System.GetCLIParam("aicfRideCooldownMs", value) && !value.IsEmpty())
+			return Math.Max(0, value.ToInt());
+		float speed = 1;
+		if (System.GetCLIParam("zcrSpeed", value) && !value.IsEmpty())
+			speed = Math.Max(1, value.ToFloat());
+		return 180000 / speed;
+	}
+
+	protected void ZcrRideFailed(FactionKey faction, int slotId, string why)
+	{
+		int ms = ZcrRideCooldownMs();
+		if (ms <= 0)
+			return;
+		m_mZcrRideCooldownUntil.Set(faction + ":" + slotId, System.GetTickCount() + ms);
+		Print(string.Format("[ZCR][RIDE] faction=%1 slot=%2 failed=%3 walks_ms=%4", faction, slotId, why, ms), LogLevel.NORMAL);
+	}
+
+	protected bool ZcrRideCooling(FactionKey faction, int slotId)
+	{
+		int until;
+		return m_mZcrRideCooldownUntil.Find(faction + ":" + slotId, until) && System.GetTickCount() < until;
 	}
 
 	protected AICF_EVehicleAcceptanceFailureDomain ResolveTerminalFailureDomain(
