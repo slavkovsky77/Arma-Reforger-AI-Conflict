@@ -10,7 +10,11 @@ class AICF_Stage1Config
 	static const int DEFAULT_GROUP_SIZE = 5;
 	static const int DEFAULT_FULL_SIZE_GROUPS_PER_FACTION = GROUP_SLOTS_PER_FACTION;
 	static const int MIN_GROUP_SIZE = 1;
-	static const int MAX_GROUP_SIZE = 5;
+	// ZCR (26 Oct - Martin: "fewer teams, 50 soldiers a side; not all teams the same size - assault teams can be bigger
+	// than crew, engineer, drone or transport teams"): the hard maximum is 8; every team still defaults to 5
+	// (FULL_GROUP_SIZE), only -aicfAttackTeamSize / -aicfDefendTeamSize make assault or defend teams bigger or smaller.
+	static const int MAX_GROUP_SIZE = 8;
+	static const int FULL_GROUP_SIZE = 5;
 	// Compatibility alias for diagnostics and older static contracts. Runtime
 	// roster gates use each slot's commander-selected desired size.
 	static const int MANAGED_GROUP_SIZE = DEFAULT_GROUP_SIZE;
@@ -94,8 +98,18 @@ class AICF_Stage1Config
 	static int GetDefaultGroupSizeForSlot(int slotId)
 	{
 		if (slotId >= 0 && slotId < DEFAULT_FULL_SIZE_GROUPS_PER_FACTION)
-			return MAX_GROUP_SIZE;
+			return FULL_GROUP_SIZE;
 		return DEFAULT_GROUP_SIZE;
+	}
+
+	// A team's size by its role (ZCR, 26 Oct): -aicfAttackTeamSize / -aicfDefendTeamSize (1-8); 5 otherwise, as before.
+	static int GroupSizeForRole(AICF_EGroupRole role, int slotId)
+	{
+		if (role == AICF_EGroupRole.ATTACK)
+			return CliGroupSize("aicfAttackTeamSize", GetDefaultGroupSizeForSlot(slotId));
+		if (role == AICF_EGroupRole.DEFEND)
+			return CliGroupSize("aicfDefendTeamSize", GetDefaultGroupSizeForSlot(slotId));
+		return GetDefaultGroupSizeForSlot(slotId);
 	}
 
 	protected int m_iInitialTickets;
