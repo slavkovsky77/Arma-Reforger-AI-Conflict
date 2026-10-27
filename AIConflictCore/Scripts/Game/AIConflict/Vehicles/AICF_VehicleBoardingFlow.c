@@ -2313,6 +2313,9 @@ class AICF_VehicleBoardingFlow
 			failureReason = "PASSENGER_SEAT_PLAN_IDENTITY_INVALID";
 			return false;
 		}
+		// One by one: nothing new while a passenger of this vehicle is still on his way in (Maintain calls this every tick).
+		if (ZcrOneByOne() && ZcrPassengerStillBoarding(state, lease))
+			return true;
 		for (int index = 0; index < seatPlan.Count(); index++)
 		{
 			AICF_VehiclePassengerSeatPlanEntry entry = seatPlan.Get(index);
@@ -2401,8 +2404,34 @@ class AICF_VehicleBoardingFlow
 			ReportPassengerAction(
 				"PASSENGER_ACTION_TRANSITION",
 				trip, lease, token, causationId, "EXACT_CARGO_PLAN_PAIR_ISSUED", true);
+			if (ZcrOneByOne())
+				return true;              // the next one when this one is in
 		}
 		return true;
+	}
+
+	// ZCR (27 Oct, Martin: "they get stuck and run bumping into each other - they should go slowly one by one"; "getting in
+	// one by one, that's even more natural"): the passengers of a ride get their get-in orders one at a time - the next one
+	// when the one before is seated. -aicfBoardOneByOne (off until Martin has seen it; give the passenger phase more time
+	// with -aicfVehiclePassengerBoardingTimeoutMs).
+	protected static bool ZcrOneByOne()
+	{
+		return System.IsCLIParam("aicfBoardOneByOne");
+	}
+
+	protected bool ZcrPassengerStillBoarding(AICF_VehicleBoardingState state, AICF_VehicleLease lease)
+	{
+		AICF_VehicleBoardingTokenSet tokens = state.GetTokens();
+		for (int i = 0; i < tokens.Count(); i++)
+		{
+			AICF_VehicleBoardingActionToken token = tokens.Get(i);
+			if (!token || token.GetCompartmentType() != EAICompartmentType.Cargo)
+				continue;
+			IEntity entity = token.GetReservedEntity();
+			if (entity && AICF_GroupRuntime.IsAliveCharacter(entity) && !m_Watchdog.IsMemberSettledInVehicle(entity, lease.GetVehicle()))
+				return true;
+		}
+		return false;
 	}
 
 	protected bool MaintainPassengerActions(
