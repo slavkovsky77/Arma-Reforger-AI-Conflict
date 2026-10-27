@@ -494,7 +494,23 @@ class AICF_VehicleSpawner
 	protected static const float REQUESTING_GROUP_CLEARANCE_MARGIN_METERS = 2.0;
 	protected static const int MAX_SPAWN_POSITIONS_PER_BASE = 16;
 	protected static const float SURFACE_PROBE_RADIUS_METERS = 6.0;
-	protected static const float MAX_FOOTPRINT_HEIGHT_DELTA_METERS = 4.0;
+	// ZCR (27 Oct, the crash hunt - review note 421): 4.0 m let rides spawn on slopes, and an APC boarded on a slope
+	// crashes the dedicated server (enf_entity.cpp BadMatrix33 -> access violation). In the crash sub-lab 8 LAV-25s
+	// boarded on Moss Hill's 17-21 deg hillside crashed 72 of 72 runs, the same test on the flat airport apron 0 of 3;
+	// in the battle runs 7 of 10 crashes came 6-15 s after a ride spawned on one spot by the main base (1552,879: 2.54 m
+	// under the vehicle) - used in 106 of 122 runs since the free pads (c040e5b), never before. The ground under a
+	// ride may now differ by 1.0 m (most spots: under 0.5 m); -aicfMaxSpawnDeltaM N (4 = as before).
+	protected static float s_fMaxFootprintDelta = -1;
+	static float MaxFootprintDelta()
+	{
+		if (s_fMaxFootprintDelta >= 0)
+			return s_fMaxFootprintDelta;
+		string value;
+		s_fMaxFootprintDelta = 1.0;
+		if (System.GetCLIParam("aicfMaxSpawnDeltaM", value) && !value.IsEmpty())
+			s_fMaxFootprintDelta = Math.Clamp(value.ToFloat(), 0.2, 10);
+		return s_fMaxFootprintDelta;
+	}
 	protected static const float SITE_RESERVATION_SEPARATION_METERS = 20.0;
 	protected static const float VEHICLE_CLEARANCE_HEIGHT_METERS = 2.0;
 	protected static const int MAX_PAD_DIAGNOSTIC_ENTITIES = 12;
@@ -1942,7 +1958,7 @@ class AICF_VehicleSpawner
 		}
 
 		footprintHeightDeltaMeters = maximumTerrainY - minimumTerrainY;
-		if (footprintHeightDeltaMeters > MAX_FOOTPRINT_HEIGHT_DELTA_METERS)
+		if (footprintHeightDeltaMeters > MaxFootprintDelta())
 		{
 			surfaceKind = "UNEVEN_TERRAIN";
 			return false;
