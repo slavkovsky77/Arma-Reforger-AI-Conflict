@@ -188,7 +188,7 @@ class AICF_FIAGarrisonCrew : AICF_FIAPatrolCrew
 			if (!physics || physics.GetVelocity().Length() > 1 || now < g.m_iDismountNextMs || access.IsGettingOut() || access.IsGettingIn()) continue;
 			if (access.GetCompartment() != seat || seat.GetOccupant() != member) continue;
 			// Обычная высадка, без teleport: разрешена и рядом с игроком.
-			bool issued = access.GetOutVehicle(EGetOutType.ANIMATED, -1, ECloseDoorAfterActions.LEAVE_OPEN, false);
+			bool issued = access.GetOutVehicle(AICF_VehicleSpawner.SafeExitType(g.m_Vehicle), -1, ECloseDoorAfterActions.LEAVE_OPEN, false);
 			g.m_iDismountNextMs = now + 2000;
 			g.Log("FIA_GARRISON_DESANT_EXIT", string.Format("member=%1 seat=%2 accepted=%3", member.GetID(), i, issued));
 		}

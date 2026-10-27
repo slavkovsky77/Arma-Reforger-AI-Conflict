@@ -501,6 +501,30 @@ class AICF_VehicleSpawner
 	// under the vehicle) - used in 106 of 122 runs since the free pads (c040e5b), never before. The ground under a
 	// ride may now differ by 1.0 m (most spots: under 0.5 m); -aicfMaxSpawnDeltaM N (4 = as before).
 	protected static float s_fMaxFootprintDelta = -1;
+	protected static float s_fSafeExitDeg = -1;
+
+	// ZCR (27 Oct, the crash - review note 421): a soldier climbing out of a tilted vehicle can crash the dedicated server
+	// (BadMatrix33 -> access violation, the release build too; Zeus Commander's crash sub-lab). Over -zcrSafeBoardDeg
+	// degrees of tilt the fork's own direct exits are a teleport beside the vehicle instead of the animation (Zeus
+	// Commander's ZCR_SafeBoarding does the same for the game's AI get-in/get-out behaviours). 0 = off (default).
+	static EGetOutType SafeExitType(IEntity vehicle)
+	{
+		if (s_fSafeExitDeg < 0)
+		{
+			s_fSafeExitDeg = 0;
+			string value;
+			if (System.GetCLIParam("zcrSafeBoardDeg", value) && !value.IsEmpty())
+				s_fSafeExitDeg = Math.Clamp(value.ToFloat(), 0, 90);
+		}
+		if (s_fSafeExitDeg <= 0 || !vehicle)
+			return EGetOutType.ANIMATED;
+		vector mat[4];
+		vehicle.GetWorldTransform(mat);
+		vector up = mat[1];
+		if (Math.Acos(Math.Clamp(up[1], -1, 1)) * Math.RAD2DEG > s_fSafeExitDeg)
+			return EGetOutType.TELEPORT;
+		return EGetOutType.ANIMATED;
+	}
 	static float MaxFootprintDelta()
 	{
 		if (s_fMaxFootprintDelta >= 0)

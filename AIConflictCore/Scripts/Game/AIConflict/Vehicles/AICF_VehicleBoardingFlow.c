@@ -1291,7 +1291,7 @@ class AICF_VehicleBoardingFlow
 			}
 			access.InterruptVehicleActionQueue(true, true, true);
 			bool accepted = access.GetOutVehicle(
-				EGetOutType.ANIMATED,
+				AICF_VehicleSpawner.SafeExitType(vehicle),
 				-1,
 				ECloseDoorAfterActions.INVALID,
 				false,

@@ -816,7 +816,7 @@ class AICF_VehicleDismountFlow
 			}
 			access.InterruptVehicleActionQueue(true, true, true);
 			if (access.GetOutVehicle(
-				EGetOutType.ANIMATED,
+				AICF_VehicleSpawner.SafeExitType(vehicle),
 				-1,
 				ECloseDoorAfterActions.INVALID,
 				false))
@@ -1730,7 +1730,7 @@ class AICF_VehicleDismountFlow
 		if (!w || !w.Ready()) return AICF_TripOutcome.Wait("EXACT_DRIVER_NOT_SETTLED", "LOGISTICS_EXIT");
 		if (w.HasForeignOccupant()) return AICF_TripOutcome.TerminalFailClosed("PLAYER_PROTECTED", "LOGISTICS_EXIT");
 		CompartmentAccessComponent access = w.m_Driver.GetCompartmentAccessComponent();
-		access.GetOutVehicle(EGetOutType.ANIMATED, -1, ECloseDoorAfterActions.CLOSE_DOOR, true);
+		access.GetOutVehicle(AICF_VehicleSpawner.SafeExitType(w.m_Vehicle), -1, ECloseDoorAfterActions.CLOSE_DOOR, true);
 		return AICF_TripOutcome.Wait("TERMINAL_ANIMATED_EXIT_REQUESTED", "LOGISTICS_EXIT");
 	}
 
