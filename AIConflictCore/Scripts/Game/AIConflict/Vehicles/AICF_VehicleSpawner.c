@@ -506,12 +506,13 @@ class AICF_VehicleSpawner
 	// ZCR (27 Oct, the crash - review note 421): a soldier climbing out of a tilted vehicle can crash the dedicated server
 	// (BadMatrix33 -> access violation, the release build too; Zeus Commander's crash sub-lab). Over -zcrSafeBoardDeg
 	// degrees of tilt the fork's own direct exits are a teleport beside the vehicle instead of the animation (Zeus
-	// Commander's ZCR_SafeBoarding does the same for the game's AI get-in/get-out behaviours). 0 = off (default).
+	// Commander's ZCR_SafeBoarding does the same for the game's AI get-in/get-out behaviours). Default 8 (on since the battle
+	// A/B of 27 Oct morning, review note 421); -zcrSafeBoardDeg 0 = off.
 	static EGetOutType SafeExitType(IEntity vehicle)
 	{
 		if (s_fSafeExitDeg < 0)
 		{
-			s_fSafeExitDeg = 0;
+			s_fSafeExitDeg = 8;
 			string value;
 			if (System.GetCLIParam("zcrSafeBoardDeg", value) && !value.IsEmpty())
 				s_fSafeExitDeg = Math.Clamp(value.ToFloat(), 0, 90);
