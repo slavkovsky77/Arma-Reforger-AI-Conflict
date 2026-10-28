@@ -300,10 +300,6 @@ class AICF_VehicleAcquisitionFlow
 		// base's few dry pads taken, teams 6-12 got theirs at a base 765-1350 m away and walked to it, timing out
 		// every 90 s for 6 minutes. Further than -aicfRideFromBaseMeters (+50) is no site: it waits for a pad
 		// (PadWaitLimitMs), then walks.
-		float maximumSpawnMeters = m_Config.GetMaximumSpawnDistanceMeters();
-		float rideFromBase = AICF_VehicleCoordinator.ZcrRideFromBaseMeters();
-		if (trip.GetAssignment().GetUnitType() == AICF_EGroupUnitType.INFANTRY && rideFromBase > 0)
-			maximumSpawnMeters = Math.Min(maximumSpawnMeters, rideFromBase + 50);
 		AICF_VehicleSpawnSiteSelection selection;
 		bool siteReady = m_Spawner.TrySelectSiteForAcquisition(
 			m_Campaign,
@@ -311,7 +307,7 @@ class AICF_VehicleAcquisitionFlow
 			trip.GetAssignment().GetGroup(),
 			m_ConflictAdapter,
 			ResolveGroupPosition(trip.GetAssignment().GetGroup()),
-			maximumSpawnMeters,
+			ZcrSpawnMeters(m_Config.GetMaximumSpawnDistanceMeters(), trip),
 			0,
 			identity,
 			requestState.GetRequestGeneration(),
@@ -1812,6 +1808,15 @@ class AICF_VehicleAcquisitionFlow
 			"ENTER_WAITING_FOR_SITE:" + reason,
 			BuildCausationId(trip, requestState, "ENTER_WAIT"),
 			nextProbeAtMs);
+	}
+
+	// The ZCR cap on the spawn distance above: infantry within -aicfRideFromBaseMeters + 50 (0: AI Conflict's own).
+	protected static float ZcrSpawnMeters(float configured, AICF_TransportTrip trip)
+	{
+		float rideFromBase = AICF_VehicleCoordinator.ZcrRideFromBaseMeters();
+		if (!trip || !trip.GetAssignment() || trip.GetAssignment().GetUnitType() != AICF_EGroupUnitType.INFANTRY || rideFromBase <= 0)
+			return configured;
+		return Math.Min(configured, rideFromBase + 50);
 	}
 
 	// ZCR (21 Oct): a squad waits at most 45 game seconds for a free vehicle pad, then goes on foot. It
