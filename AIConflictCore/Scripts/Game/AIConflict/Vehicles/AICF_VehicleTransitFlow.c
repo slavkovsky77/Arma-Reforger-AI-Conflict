@@ -2120,6 +2120,13 @@ class AICF_VehicleTransitFlow
 			state.GetMaximumCrewRecoveryAttempts(),
 			state.GetMobilityRecoveryAttempts(),
 			state.GetMaximumMobilityRecoveryAttempts());
+		// ZCR, 28 Oct: where the ride was given up (the one-point sub-lab: 5 US rides 'stuck', the log had no place).
+		if (trip.GetLease() && trip.GetLease().GetVehicle())
+		{
+			vector at = trip.GetLease().GetVehicle().GetOrigin();
+			details += string.Format(" zcr_at=%1,%2 target=%3,%4", Math.Round(at[0]), Math.Round(at[2]),
+				Math.Round(state.GetTacticalTarget()[0]), Math.Round(state.GetTacticalTarget()[2]));
+		}
 		AICF_Stage3Diagnostics.Warning("VEHICLE_RECOVERY_FAILED", details);
 		return AICF_TripOutcome.FallbackToFoot(reason, causationId);
 	}
