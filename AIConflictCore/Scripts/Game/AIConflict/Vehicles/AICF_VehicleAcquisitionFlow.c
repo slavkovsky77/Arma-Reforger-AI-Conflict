@@ -296,6 +296,14 @@ class AICF_VehicleAcquisitionFlow
 		if (!HasConservativeCapacityCandidate(candidates, kind, aliveCount))
 			return EndRequest(trip, fleet, requestState, "INSUFFICIENT_COMPARTMENTS", nowMs);
 
+		// ZCR, 28 Oct (the assault test): an infantry team's vehicle comes from a base near it. With the harbour main
+		// base's few dry pads taken, teams 6-12 got theirs at a base 765-1350 m away and walked to it, timing out
+		// every 90 s for 6 minutes. Further than -aicfRideFromBaseMeters (+50) is no site: it waits for a pad
+		// (PadWaitLimitMs), then walks.
+		float maximumSpawnMeters = m_Config.GetMaximumSpawnDistanceMeters();
+		float rideFromBase = AICF_VehicleCoordinator.ZcrRideFromBaseMeters();
+		if (trip.GetAssignment().GetUnitType() == AICF_EGroupUnitType.INFANTRY && rideFromBase > 0)
+			maximumSpawnMeters = Math.Min(maximumSpawnMeters, rideFromBase + 50);
 		AICF_VehicleSpawnSiteSelection selection;
 		bool siteReady = m_Spawner.TrySelectSiteForAcquisition(
 			m_Campaign,
@@ -303,7 +311,7 @@ class AICF_VehicleAcquisitionFlow
 			trip.GetAssignment().GetGroup(),
 			m_ConflictAdapter,
 			ResolveGroupPosition(trip.GetAssignment().GetGroup()),
-			m_Config.GetMaximumSpawnDistanceMeters(),
+			maximumSpawnMeters,
 			0,
 			identity,
 			requestState.GetRequestGeneration(),

@@ -159,6 +159,15 @@ class AICF_Stage3Config
 	protected void ApplyCLIOverrides()
 	{
 		string value;
+		// ZCR, 28 Oct: the boarding windows count real milliseconds. Our lab ran at 3x, where 25 s gave a driver 75
+		// game seconds to walk to the vehicle (spawned 50-75 m from the team's staging spot); Martin watches at 1x,
+		// where the same 25 s failed teams' boardings again and again (one team 5 times in a row). The defaults are
+		// now game time: 75 s for the driver and gunner, 90 s for the passengers, at any -zcrSpeed.
+		float speed = 1;
+		if (System.GetCLIParam("zcrSpeed", value) && !value.IsEmpty())
+			speed = Math.Max(1, value.ToFloat());
+		m_iBoardingTimeoutMs = Math.Max(10000, 75000 / speed);
+		m_iPassengerBoardingTimeoutMs = Math.Max(10000, 90000 / speed);
 		if (System.GetCLIParam("aicfTransportVehiclesPerFaction", value))
 			m_iTransportVehiclesPerFaction = ClampInt(value.ToInt(), 0, AICF_Stage1Config.GROUP_SLOTS_PER_FACTION);
 		if (System.GetCLIParam("aicfArmedLightVehiclesPerFaction", value))

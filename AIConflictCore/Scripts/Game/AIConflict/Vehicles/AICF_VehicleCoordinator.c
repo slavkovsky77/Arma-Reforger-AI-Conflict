@@ -882,7 +882,7 @@ class AICF_VehicleCoordinator
 		Print(string.Format("[ZCR][RIDE] faction=%1 slot=%2 failed=%3 walks_ms=%4", faction, slotId, why, ms), LogLevel.NORMAL);
 	}
 
-	protected static float ZcrRideFromBaseMeters()
+	static float ZcrRideFromBaseMeters()
 	{
 		string value;
 		if (System.GetCLIParam("aicfRideFromBaseMeters", value) && !value.IsEmpty())
