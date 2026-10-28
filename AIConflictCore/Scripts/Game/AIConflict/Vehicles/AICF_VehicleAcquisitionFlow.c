@@ -299,7 +299,8 @@ class AICF_VehicleAcquisitionFlow
 		// ZCR, 28 Oct (the assault test): an infantry team's vehicle comes from a base near it. With the harbour main
 		// base's few dry pads taken, teams 6-12 got theirs at a base 765-1350 m away and walked to it, timing out
 		// every 90 s for 6 minutes. Further than -aicfRideFromBaseMeters (+50) is no site: it waits for a pad
-		// (PadWaitLimitMs), then walks.
+		// (PadWaitLimitMs), then walks. The cap goes to the spawner for this one search (the call keeps AI Conflict's form).
+		m_Spawner.ZcrCapNextSearch(ZcrSpawnMeters(m_Config.GetMaximumSpawnDistanceMeters(), trip));
 		AICF_VehicleSpawnSiteSelection selection;
 		bool siteReady = m_Spawner.TrySelectSiteForAcquisition(
 			m_Campaign,
@@ -307,7 +308,7 @@ class AICF_VehicleAcquisitionFlow
 			trip.GetAssignment().GetGroup(),
 			m_ConflictAdapter,
 			ResolveGroupPosition(trip.GetAssignment().GetGroup()),
-			ZcrSpawnMeters(m_Config.GetMaximumSpawnDistanceMeters(), trip),
+			m_Config.GetMaximumSpawnDistanceMeters(),
 			0,
 			identity,
 			requestState.GetRequestGeneration(),

@@ -1069,6 +1069,10 @@ class AICF_VehicleSpawner
 	// New acquisition boundary. It performs every strategic/site/surface/member
 	// check but never allocates an entity. The caller may use it from a cap-free
 	// WAITING_FOR_SITE probe or immediately before a SPAWN_COMMIT attempt.
+	// ZCR, 28 Oct: a tighter spawn distance for the next site search only (an infantry team's ride - AICF_VehicleAcquisitionFlow).
+	protected float m_fZcrNextCap;
+	void ZcrCapNextSearch(float meters) { m_fZcrNextCap = meters; }
+
 	bool TrySelectSiteForAcquisition(
 		SCR_GameModeCampaign campaign,
 		SCR_CampaignFaction faction,
@@ -1083,6 +1087,9 @@ class AICF_VehicleSpawner
 		bool preflightOnly,
 		out AICF_VehicleSpawnSiteSelection selection)
 	{
+		if (m_fZcrNextCap > 0)
+			maximumSpawnDistanceMeters = Math.Min(maximumSpawnDistanceMeters, m_fZcrNextCap);
+		m_fZcrNextCap = 0;
 		selection = new AICF_VehicleSpawnSiteSelection();
 		selection.m_sFailureReason = "INVALID_SPAWN_REQUEST";
 		if (!Replication.IsServer() || !campaign || !campaign.IsMaster() ||
