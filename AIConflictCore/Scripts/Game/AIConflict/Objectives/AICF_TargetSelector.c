@@ -34,6 +34,21 @@ class AICF_TargetSelector
 				queue.Insert(next);
 			}
 		}
+		// ZCR, 29 Oct (the one-point sub-lab, -zcrOnePoint <base, underscores for spaces>): both sides may attack the point
+		// from the start, whatever their radio network reaches - Arleville links only to Moss Hill and Signal Hill, so the
+		// side without either never had it on its list and stayed home.
+		string onePoint;
+		if (System.GetCLIParam("zcrOnePoint", onePoint) && !onePoint.IsEmpty())
+		{
+			onePoint.Replace("_", " ");
+			for (int p; p < graph.GetNodeCount(); p++)
+			{
+				AICF_ObjectiveNode pointNode = graph.GetNode(p);
+				if (pointNode && pointNode.GetBase() && !result.Contains(pointNode.GetId()) && pointNode.GetBase().IsValidTarget(faction) &&
+					WidgetManager.Translate(pointNode.GetBase().GetBaseName()) == onePoint)
+					result.Insert(pointNode.GetId());
+			}
+		}
 		result.Sort();
 	}
 
