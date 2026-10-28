@@ -699,6 +699,16 @@ class AICF_VehicleCoordinator
 				reason = "ZCR_FAR_FROM_RIDE_BASE";
 				return false;
 			}
+			// ZCR, 29 Oct (the one-point runs, 28 Oct): 5-9 rides of a side started from one HQ at once and blocked
+			// each other between the pads and its one road out - 15 of 16 rides given up 'stuck in transit' were
+			// still within 70 m of the HQ, and 14 of 79 requests delivered a team. With -aicfRidesPerBase N (0: as
+			// before) at most N rides are being planned, boarded or still leaving near a base; the next team walks.
+			int ridesPerBase = ZcrRidesPerBase();
+			if (ridesPerBase > 0 && ZcrRidesLeaving(assignment.GetFactionKey(), marcher.GetOrigin(), slot.GetSlotId()) >= ridesPerBase)
+			{
+				reason = "ZCR_BASE_BUSY";
+				return false;
+			}
 		}
 		if (ZcrRideCooling(assignment.GetFactionKey(), slot.GetSlotId()))
 		{
@@ -916,6 +926,34 @@ class AICF_VehicleCoordinator
 				return true;
 		}
 		return false;
+	}
+
+	static int ZcrRidesPerBase()
+	{
+		string value;
+		if (System.GetCLIParam("aicfRidesPerBase", value) && !value.IsEmpty())
+			return Math.Max(0, value.ToInt());
+		return 0;
+	}
+
+	// Rides of this side (other teams) from asking for a vehicle to still driving out, whose team is within
+	// -aicfRideFromBaseMeters (at least 150 m) of the spot.
+	protected int ZcrRidesLeaving(FactionKey factionKey, vector spot, int slotId)
+	{
+		float meters = Math.Max(150, ZcrRideFromBaseMeters());
+		int count;
+		for (int index; index < m_Trips.GetCount(); index++)
+		{
+			AICF_TransportTrip trip = m_Trips.Get(index);
+			if (!trip || trip.GetFactionKey() != factionKey || trip.GetSlotId() == slotId || !trip.GetAssignment())
+				continue;
+			if (trip.GetPhase() > AICF_ETransportTripPhase.TRANSIT)
+				continue;
+			IEntity leader = AICF_GroupRuntime.ResolveAliveLeader(trip.GetAssignment().GetGroup());
+			if (leader && vector.DistanceXZ(leader.GetOrigin(), spot) <= meters)
+				count++;
+		}
+		return count;
 	}
 
 	protected bool ZcrRideCooling(FactionKey faction, int slotId)
