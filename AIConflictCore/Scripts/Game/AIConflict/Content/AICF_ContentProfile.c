@@ -150,24 +150,31 @@ class AICF_ContentProfile
 	}
 
 	// ZCR (20 Oct, Martin: "build much more"): Conflict's own flat-slot fortifications (TRAIT_FORTIFICATION,
-	// listed by -zcrListFortifications on Arland), built in turn: bunker, sandbag positions, MG nests, tower.
+	// listed by -zcrListFortifications on Arland), built in turn. Mostly covered ones (28 Oct, Martin: "for defense I think
+	// mostly bunkers and covered stuff should be built, not sandbags so much"; 9 matches had built 96 sandbag positions,
+	// 73 MG nests, 36 towers and only 35 bunkers): of 8, four bunkers, two guard towers (roofed), one MG nest, one sandbag
+	// position. A kind that doesn't fit falls to the next one (the index counts retries), and the next build is a bunker.
 	ResourceName GetFortificationVariant(FactionKey stableKey, int index)
 	{
 		array<ResourceName> list = {};
 		if (stableKey == "US")
-			list = {"{E87F2E0B5C56A1C3}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_Bunker_S_US_01.et",
+		{
+			ResourceName bunker = "{E87F2E0B5C56A1C3}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_Bunker_S_US_01.et";
+			ResourceName tower = "{E5043AB2B2C5DFE1}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_GuardTower_S_US_01.et";
+			list = {bunker, tower, bunker,
 				"{02C9F8198A7B9897}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_MachineGunNest_S_US_01.et",
-				"{31DBF7E7C9D70576}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_SandbagPosition_S_US_03.et",
-				"{6E9DCCF936BF17B9}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_MachineGunNest_S_US_02.et",
-				"{0CEFD2DFBCBB8C41}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_SandbagPosition_S_US_04.et",
-				"{E5043AB2B2C5DFE1}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_GuardTower_S_US_01.et"};
+				bunker, tower, bunker,
+				"{31DBF7E7C9D70576}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_SandbagPosition_S_US_03.et"};
+		}
 		else if (stableKey == "USSR")
-			list = {"{4885DEA01D687DB3}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_Bunker_S_USSR_01.et",
+		{
+			ResourceName bunker = "{4885DEA01D687DB3}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_Bunker_S_USSR_01.et";
+			ResourceName tower = "{9C13C175AB00BCA8}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_GuardTower_S_USSR_01.et";
+			list = {bunker, tower, bunker,
 				"{047B9C8AAB50CE0F}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_MachineGunNest_S_USSR_01.et",
-				"{1200F6499BA275FB}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_SandbagPosition_S_USSR_03.et",
-				"{682FA86A17944120}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_MachineGunNest_S_USSR_02.et",
-				"{2F34D371EECEFCCD}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_SandbagPosition_S_USSR_04.et",
-				"{9C13C175AB00BCA8}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_GuardTower_S_USSR_01.et"};
+				bunker, tower, bunker,
+				"{1200F6499BA275FB}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_SandbagPosition_S_USSR_03.et"};
+		}
 		if (list.IsEmpty())
 			return ResourceName.Empty;
 		return list[Math.AbsInt(index) % list.Count()];
