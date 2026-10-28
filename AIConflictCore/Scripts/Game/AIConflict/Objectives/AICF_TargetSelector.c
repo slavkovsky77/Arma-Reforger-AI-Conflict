@@ -44,7 +44,7 @@ class AICF_TargetSelector
 			for (int p; p < graph.GetNodeCount(); p++)
 			{
 				AICF_ObjectiveNode pointNode = graph.GetNode(p);
-				if (pointNode && pointNode.GetBase() && !result.Contains(pointNode.GetId()) && pointNode.GetBase().IsValidTarget(faction) &&
+				if (pointNode && pointNode.GetBase() && !result.Contains(pointNode.GetId()) && pointNode.GetBase().GetFaction() != faction &&
 					WidgetManager.Translate(pointNode.GetBase().GetBaseName()) == onePoint)
 					result.Insert(pointNode.GetId());
 			}
