@@ -37,6 +37,15 @@ class AICF_InfantryRecruitmentConfig
 			m_iSpecialistCost = Math.ClampInt(value.ToInt(), 1, 1000);
 	}
 
+	// ZCR, 28 Oct: an attack team further than this from the barracks doesn't go back to recruit (0: as before).
+	static float AttackRecruitMeters()
+	{
+		string value;
+		if (System.GetCLIParam("aicfAttackRecruitMeters", value) && !value.IsEmpty())
+			return Math.Clamp(value.ToFloat(), 0, MAX_DISTANCE_METERS);
+		return 150;
+	}
+
 	int Cost(string role)
 	{
 		if (role == "MEDIC")

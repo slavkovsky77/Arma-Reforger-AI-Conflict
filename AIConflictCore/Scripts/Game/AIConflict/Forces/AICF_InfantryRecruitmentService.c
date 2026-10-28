@@ -181,7 +181,20 @@ class AICF_InfantryRecruitmentService
 						m_Planner.HoldInfantryForMuster(slot, faction);
 					continue;
 				}
+				// ZCR, 28 Oct (Martin, watching the assault test: "they just walk around"): teams set out with 2 of 5
+				// men and were sent back up to 480 m to recruit the rest - 28 Soviet trips in 10 minutes, most ending
+				// FACTION_LIMIT (the side already at its cap) or timed out, and 5 teams missed their ride because the
+				// trip walked them away from the vehicle. No trip when the side can't recruit anyway.
+				if (m_iAvailableAgents <= 0 || (faction == m_AllowanceUS && m_iUSAllowance == 0) ||
+					(faction == m_AllowanceUSSR && m_iUSSRAllowance == 0))
+					continue;
 				AICF_InfantryRecruitmentOrder order = SelectBarracks(slot, faction, leader.GetOrigin());
+				// ... and an attack team that has set out doesn't turn back to recruit (-aicfAttackRecruitMeters,
+				// 150 m from the barracks; 0: as before).
+				float attackRecruitMeters = AICF_InfantryRecruitmentConfig.AttackRecruitMeters();
+				if (order && slot.GetRole() == AICF_EGroupRole.ATTACK && attackRecruitMeters > 0 &&
+					order.m_fApproachBestDistance > attackRecruitMeters)
+					continue;
 				if (!order)
 				{
 					LogDeferred(slot, faction);

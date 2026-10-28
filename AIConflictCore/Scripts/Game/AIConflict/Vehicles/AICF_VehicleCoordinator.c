@@ -689,6 +689,16 @@ class AICF_VehicleCoordinator
 				reason = "INFANTRY_SHORT_MARCH";
 				return false;
 			}
+			// ZCR, 28 Oct (Martin, watching the assault test: team A10 "walking 1500 meter", then back to the HQ
+			// for a car it boarded 4 minutes in): a ride is granted where the team stands, the vehicle comes from a
+			// base up to 2 km away, and a team that had walked out turned back for it - 5 of 12 Soviet attack
+			// teams, up to 1.6 km. A team rides only from within -aicfRideFromBaseMeters (250 m; 0: as before) of
+			// a base of its side that can give it a vehicle; further out it keeps walking.
+			if (!ZcrNearRideBase(assignment.GetFactionKey(), marcher.GetOrigin()))
+			{
+				reason = "ZCR_FAR_FROM_RIDE_BASE";
+				return false;
+			}
 		}
 		if (ZcrRideCooling(assignment.GetFactionKey(), slot.GetSlotId()))
 		{
@@ -870,6 +880,42 @@ class AICF_VehicleCoordinator
 			return;
 		m_mZcrRideCooldownUntil.Set(faction + ":" + slotId, System.GetTickCount() + ms);
 		Print(string.Format("[ZCR][RIDE] faction=%1 slot=%2 failed=%3 walks_ms=%4", faction, slotId, why, ms), LogLevel.NORMAL);
+	}
+
+	protected static float ZcrRideFromBaseMeters()
+	{
+		string value;
+		if (System.GetCLIParam("aicfRideFromBaseMeters", value) && !value.IsEmpty())
+			return Math.Max(0, value.ToFloat());
+		return 250;
+	}
+
+	// A base of this side that can give a vehicle (as the vehicle spawner judges it; the first frames' inactive
+	// spawn points count) within -aicfRideFromBaseMeters of the spot.
+	protected bool ZcrNearRideBase(FactionKey factionKey, vector spot)
+	{
+		float meters = ZcrRideFromBaseMeters();
+		if (meters <= 0 || !m_Campaign || !m_ConflictAdapter)
+			return true;
+		SCR_CampaignFaction faction = SCR_CampaignFaction.Cast(GetGame().GetFactionManager().GetFactionByKey(factionKey));
+		if (!faction)
+			return true;
+		array<SCR_CampaignMilitaryBaseComponent> bases = {};
+		SCR_CampaignMilitaryBaseManager manager = m_Campaign.GetBaseManager();
+		if (manager)
+			manager.GetBases(bases);
+		SCR_CampaignMilitaryBaseComponent main = faction.GetMainBase();
+		if (main && !bases.Contains(main))
+			bases.Insert(main);
+		foreach (SCR_CampaignMilitaryBaseComponent base : bases)
+		{
+			if (!base || !base.GetOwner() || vector.DistanceXZ(base.GetOwner().GetOrigin(), spot) > meters)
+				continue;
+			string why = m_ConflictAdapter.GetSpawnRejectionReason(base, faction);
+			if (why.IsEmpty() || (base == main && (why == "SPAWN_POINT_INACTIVE" || why == "SPAWN_FACTION_INITIALIZING")))
+				return true;
+		}
+		return false;
 	}
 
 	protected bool ZcrRideCooling(FactionKey faction, int slotId)
