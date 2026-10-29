@@ -9,14 +9,23 @@ class AICF_InfantryApproachRoute
 	protected string m_sSide;          // ZCR: the marching group's side, for its kill zones
 	protected vector m_vTileCandidate;
 	protected int m_iLastCover = -1;   // ZCR: the cover score of the last leg's end point (cover= on INFANTRY_APPROACH_ASSIGNED)
+	protected bool m_bZcrHolding;      // ZCR: waiting at the attack plan's hold line (AICF_ZcrAttackPlan)
 
 	int GetLastCover()
 	{
 		return m_iLastCover;
 	}
 
+	bool ZcrHolding()
+	{
+		return m_bZcrHolding;
+	}
+
 	bool CanResumeTileWait(SCR_AIGroup group)
 	{
+		// ZCR: a team at the hold line goes on when its side goes.
+		if (m_bZcrHolding)
+			return AICF_ZcrAttackPlan.Go(m_sSide);
 		if (!IsWaitingForTile() || !group) return false;
 		AIPathfindingComponent pathfinding = AIPathfindingComponent.Cast(group.FindComponent(AIPathfindingComponent));
 		if (!pathfinding) return false;
@@ -91,15 +100,27 @@ class AICF_InfantryApproachRoute
 	protected bool PlanCandidate(AICF_ZcrPlan plan, vector leader, vector objective, int numericSlot, out vector candidate)
 	{
 		candidate = objective;
+		m_bZcrHolding = false;
 		if (plan.m_aLanes.IsEmpty())
 			return false;
 		AICF_ZcrPlanLane lane = plan.m_aLanes[numericSlot % plan.m_aLanes.Count()];
 		int n = lane.m_aPoints.Count();
 		if (n < 2)
 			return false;
+		// The hold line: at it and the side not gone yet - wait there (a timed Defend leg, see AICF_OrderPlanner).
+		bool go = AICF_ZcrAttackPlan.Go(m_sSide);
+		if (!go && vector.DistanceXZ(leader, lane.m_vHold) <= 35)
+		{
+			AICF_ZcrAttackPlan.AtHold(m_sSide, numericSlot);
+			m_bZcrHolding = true;
+			candidate = lane.m_vHold;
+			return true;
+		}
 		float toObjective = vector.DistanceXZ(leader, objective);
 		int nearest;
+		int holdIndex;
 		float nearestM = 1e9;
+		float holdM = 1e9;
 		for (int i; i < n; i++)
 		{
 			float d = vector.DistanceXZ(lane.m_aPoints[i], leader);
@@ -107,6 +128,12 @@ class AICF_InfantryApproachRoute
 			{
 				nearestM = d;
 				nearest = i;
+			}
+			float h = vector.DistanceXZ(lane.m_aPoints[i], lane.m_vHold);
+			if (h < holdM)
+			{
+				holdM = h;
+				holdIndex = i;
 			}
 		}
 		if (nearestM > 150)
@@ -122,6 +149,12 @@ class AICF_InfantryApproachRoute
 		for (int j = nearest + 1; j < n; j++)
 		{
 			along += vector.DistanceXZ(lane.m_aPoints[j - 1], lane.m_aPoints[j]);
+			// The side not gone yet: no leg past the hold line - it ends there.
+			if (!go && j >= holdIndex && nearest < holdIndex)
+			{
+				candidate = lane.m_aPoints[holdIndex];
+				return true;
+			}
 			if ((along >= 120 && vector.DistanceXZ(lane.m_aPoints[j], objective) + 40 < toObjective) || j == n - 1)
 			{
 				if (j == n - 1 && toObjective <= 80)
@@ -293,7 +326,7 @@ class AICF_InfantryApproachRoute
 			vector.DistanceSqXZ(candidate, endpoint) > 64.0 ||
 			Math.AbsFloat(endpoint[1] - candidate[1]) > 3.0 ||
 			ChimeraWorldUtils.TryGetWaterSurfaceSimple(world, endpoint - "0 0.5 0") ||
-			(!waitingForTile && vector.DistanceXZ(endpoint, objective) + 30.0 >= vector.DistanceXZ(leader.GetOrigin(), objective)))
+			(!waitingForTile && !m_bZcrHolding && vector.DistanceXZ(endpoint, objective) + 30.0 >= vector.DistanceXZ(leader.GetOrigin(), objective)))
 		{
 			Disable();
 			AICF_Stage2Diagnostics.Info("INFANTRY_APPROACH_FALLBACK",

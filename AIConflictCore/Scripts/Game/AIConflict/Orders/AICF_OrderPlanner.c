@@ -2620,6 +2620,7 @@ class AICF_OrderPlanner
 		vector targetPosition;
 		if (!TryResolveTargetPosition(target, role, targetPosition))
 			return null;
+		bool zcrHold;   // ZCR, 29 Oct: the attack plan's hold line - a timed Defend leg where the team waits (AICF_ZcrAttackPlan)
 		if (!isRelay && role == AICF_EGroupRole.ATTACK && slot.GetUnitType() == AICF_EGroupUnitType.INFANTRY)
 		{
 			AICF_InfantryApproachRoute route = slot.GetApproachRoute(target);
@@ -2634,8 +2635,11 @@ class AICF_OrderPlanner
 					return null;
 				if (approachRoute)
 					targetPosition = approachEndpoint;
+				zcrHold = approachRoute && route.ZcrHolding();
 			}
 		}
+		if (zcrHold)
+			waypointPrefab = DEFEND_WAYPOINT_PREFAB;
 		if (!isRelay && endpointRevision > 0)
 		{
 			vector recoveryEndpoint;
@@ -2710,6 +2714,9 @@ class AICF_OrderPlanner
 			// reaches it. Leader completion allowed a separated leader to terminate a
 			// waypoint while the group was still hundreds of metres from the target.
 			waypoint.SetCompletionType(EAIWaypointCompletionType.All);
+			SCR_TimedWaypoint holdWaypoint = SCR_TimedWaypoint.Cast(waypoint);
+			if (zcrHold && holdWaypoint)
+				holdWaypoint.SetHoldingTime(30);
 		}
 		else
 		{

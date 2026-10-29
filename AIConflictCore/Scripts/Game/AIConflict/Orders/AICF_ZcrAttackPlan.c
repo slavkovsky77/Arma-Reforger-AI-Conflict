@@ -77,7 +77,50 @@ class AICF_ZcrAttackPlan
 		Print(string.Format("[ZCR][ATTACKPLAN] loaded plans=%1", s_aPlans.Count()), LogLevel.NORMAL);
 	}
 
-	// The side's plan whatever its teams go for now (ZCR's hold line), else null.
+	// The hold line (Martin: "coordination of teams where they would actually attack, maybe some timing"): a team at its
+	// lane's hold point waits (AICF_InfantryApproachRoute) until GO_TEAMS teams of its side wait there, or HOLD_MAX_MS of
+	// game time after the first got there; then all go in together. -zcrNoAttackHold: no waiting.
+	static const int GO_TEAMS = 3;
+	static const float HOLD_MAX_MS = 90000;
+	protected static ref map<string, ref array<int>> s_mHolding = new map<string, ref array<int>>();
+	protected static ref map<string, float> s_mFirstHoldAt = new map<string, float>();
+	protected static ref map<string, bool> s_mGo = new map<string, bool>();
+
+	static void AtHold(string faction, int slot)
+	{
+		array<int> holding = s_mHolding.Get(faction);
+		if (!holding)
+		{
+			holding = {};
+			s_mHolding.Set(faction, holding);
+		}
+		if (holding.Contains(slot))
+			return;
+		holding.Insert(slot);
+		float now = GetGame().GetWorld().GetWorldTime();
+		if (!s_mFirstHoldAt.Contains(faction))
+			s_mFirstHoldAt.Set(faction, now);
+		Print(string.Format("[ZCR][HOLD] t=%1 side=%2 slot=%3 event=hold holding=%4 waited_s=%5", Math.Round(now / 1000), faction, slot, holding.Count(),
+			Math.Round((now - s_mFirstHoldAt.Get(faction)) / 1000)), LogLevel.NORMAL);
+	}
+
+	static bool Go(string faction)
+	{
+		if (System.IsCLIParam("zcrNoAttackHold") || s_mGo.Get(faction))
+			return true;
+		array<int> holding = s_mHolding.Get(faction);
+		if (!holding || holding.IsEmpty())
+			return false;
+		float now = GetGame().GetWorld().GetWorldTime();
+		if (holding.Count() < GO_TEAMS && now - s_mFirstHoldAt.Get(faction) < HOLD_MAX_MS)
+			return false;
+		s_mGo.Set(faction, true);
+		Print(string.Format("[ZCR][HOLD] t=%1 side=%2 slot=-1 event=go holding=%3 waited_s=%4", Math.Round(now / 1000), faction, holding.Count(),
+			Math.Round((now - s_mFirstHoldAt.Get(faction)) / 1000)), LogLevel.NORMAL);
+		return true;
+	}
+
+	// The side's plan whatever its teams go for now, else null.
 	static AICF_ZcrPlan Of(string faction)
 	{
 		if (!On() || faction.IsEmpty())
