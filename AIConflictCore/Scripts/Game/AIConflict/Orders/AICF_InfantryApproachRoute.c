@@ -59,6 +59,10 @@ class AICF_InfantryApproachRoute
 	bool BuildCandidate(vector leaderPosition, vector objective, int numericSlot, out vector candidate)
 	{
 		candidate = objective;
+		// ZCR, 29 Oct: the side's attack plan read from the map (AICF_ZcrAttackPlan, lab/attackplan.py) - its lanes.
+		AICF_ZcrPlan plan = AICF_ZcrAttackPlan.For(m_sSide, objective);
+		if (plan && !m_bDisabled && numericSlot >= 0)
+			return PlanCandidate(plan, leaderPosition, objective, numericSlot, candidate);
 		if (m_bDisabled || numericSlot < 0 || vector.DistanceXZ(leaderPosition, objective) <= 250.0)
 			return false;
 		vector direction = objective - m_vOrigin;
@@ -79,6 +83,54 @@ class AICF_InfantryApproachRoute
 		candidate = m_vOrigin + direction * nextProgress + lateral * offset;
 		candidate = TowardCover(candidate, direction, lateral, leaderPosition);
 		return vector.DistanceXZ(candidate, objective) + 40.0 < vector.DistanceXZ(leaderPosition, objective);
+	}
+
+	// The next leg on the team's lane of the plan (team N on lane N mod lanes): far from the lane and farther out than its
+	// start - to the start (the assembly point); on it - the first lane point 120 m+ along that is 40 m+ nearer the
+	// objective; within 80 m of the objective at the lane's end - straight in (false).
+	protected bool PlanCandidate(AICF_ZcrPlan plan, vector leader, vector objective, int numericSlot, out vector candidate)
+	{
+		candidate = objective;
+		if (plan.m_aLanes.IsEmpty())
+			return false;
+		AICF_ZcrPlanLane lane = plan.m_aLanes[numericSlot % plan.m_aLanes.Count()];
+		int n = lane.m_aPoints.Count();
+		if (n < 2)
+			return false;
+		float toObjective = vector.DistanceXZ(leader, objective);
+		int nearest;
+		float nearestM = 1e9;
+		for (int i; i < n; i++)
+		{
+			float d = vector.DistanceXZ(lane.m_aPoints[i], leader);
+			if (d < nearestM)
+			{
+				nearestM = d;
+				nearest = i;
+			}
+		}
+		if (nearestM > 150)
+		{
+			if (toObjective > vector.DistanceXZ(lane.m_aPoints[0], objective) + 50)
+			{
+				candidate = lane.m_aPoints[0];
+				return true;
+			}
+			return false;
+		}
+		float along;
+		for (int j = nearest + 1; j < n; j++)
+		{
+			along += vector.DistanceXZ(lane.m_aPoints[j - 1], lane.m_aPoints[j]);
+			if ((along >= 120 && vector.DistanceXZ(lane.m_aPoints[j], objective) + 40 < toObjective) || j == n - 1)
+			{
+				if (j == n - 1 && toObjective <= 80)
+					return false;
+				candidate = lane.m_aPoints[j];
+				return true;
+			}
+		}
+		return false;
 	}
 
 	// ZCR, 19 Oct (Martin: "they just walk to the points through no cover"): each step of the march
