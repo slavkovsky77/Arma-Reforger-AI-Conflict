@@ -209,8 +209,16 @@ class AICF_AdaptiveCommanderPolicy
 			// получает только безопасный HQ hold. DEFEND держит передний край.
 			if (friendly && !threatened)
 			{
+				// ZCR, 30 Oct: kept on the list but off it (m_bZcrHeld), not dropped - ZCR's main-effort binding
+				// (-zcrBindMainEffort) puts a held main effort back for the attack teams to hold. Dropped, it never saw it
+				// (both watched Farm battles, 30 Oct: 7 US attack teams sent back to the harbour HQ right after taking Farm).
 				if (slot.GetRole() != AICF_EGroupRole.DEFEND && !candidate.m_bHQ)
+				{
+					candidate.m_bAvailable = false;
+					candidate.m_bZcrHeld = true;
+					candidates.Insert(candidate);
 					continue;
+				}
 				candidate.m_fFrontValue = Math.Min(AICF_AdaptiveCommanderConfig.MAX_FRONT_VALUE, candidate.m_iOpenDirections * AICF_AdaptiveCommanderConfig.FRONT_VALUE_PER_EXIT);
 				if (slot.GetRole() == AICF_EGroupRole.ATTACK)
 				{

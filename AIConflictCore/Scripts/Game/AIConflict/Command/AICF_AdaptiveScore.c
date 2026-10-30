@@ -6,6 +6,7 @@ class AICF_AdaptiveCandidate
 	vector m_vPosition;
 	bool m_bAttack;
 	bool m_bAvailable = true;
+	bool m_bZcrHeld;	// ZCR: a held base kept off an attack/reserve team's list (m_bAvailable false); ZCR may put it back
 	bool m_bDeferred;
 	bool m_bKnownRoute;
 	float m_fRouteMeters;
