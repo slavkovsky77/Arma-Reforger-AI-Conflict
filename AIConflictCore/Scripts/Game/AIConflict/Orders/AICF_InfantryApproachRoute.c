@@ -10,6 +10,7 @@ class AICF_InfantryApproachRoute
 	protected vector m_vTileCandidate;
 	protected int m_iLastCover = -1;   // ZCR: the cover score of the last leg's end point (cover= on INFANTRY_APPROACH_ASSIGNED)
 	protected bool m_bZcrHolding;      // ZCR: waiting at the attack plan's hold line (AICF_ZcrAttackPlan)
+	protected string m_sZcrHoldKey;    // ZCR: ... of that plan (several plans run at once in the normal matches)
 
 	int GetLastCover()
 	{
@@ -23,9 +24,9 @@ class AICF_InfantryApproachRoute
 
 	bool CanResumeTileWait(SCR_AIGroup group)
 	{
-		// ZCR: a team at the hold line goes on when its side goes.
+		// ZCR: a team at the hold line goes on when its plan's teams go.
 		if (m_bZcrHolding)
-			return AICF_ZcrAttackPlan.Go(m_sSide);
+			return AICF_ZcrAttackPlan.Go(m_sZcrHoldKey);
 		if (!IsWaitingForTile() || !group) return false;
 		AIPathfindingComponent pathfinding = AIPathfindingComponent.Cast(group.FindComponent(AIPathfindingComponent));
 		if (!pathfinding) return false;
@@ -68,8 +69,9 @@ class AICF_InfantryApproachRoute
 	bool BuildCandidate(vector leaderPosition, vector objective, int numericSlot, out vector candidate)
 	{
 		candidate = objective;
-		// ZCR, 29 Oct: the side's attack plan read from the map (AICF_ZcrAttackPlan, lab/attackplan.py) - its lanes.
-		AICF_ZcrPlan plan = AICF_ZcrAttackPlan.For(m_sSide, objective);
+		// ZCR, 29 Oct: the team's attack plan read from the map (AICF_ZcrAttackPlan, lab/attackplan.py) - its lanes; the plan
+		// from the origin nearest where this approach started.
+		AICF_ZcrPlan plan = AICF_ZcrAttackPlan.ForTeam(m_sSide, numericSlot, objective, m_vOrigin);
 		if (plan && !m_bDisabled && numericSlot >= 0)
 			return PlanCandidate(plan, leaderPosition, objective, numericSlot, candidate);
 		if (m_bDisabled || numericSlot < 0 || vector.DistanceXZ(leaderPosition, objective) <= 250.0)
@@ -108,10 +110,11 @@ class AICF_InfantryApproachRoute
 		if (n < 2)
 			return false;
 		// The hold line: at it and the side not gone yet - wait there (a timed Defend leg, see AICF_OrderPlanner).
-		bool go = AICF_ZcrAttackPlan.Go(m_sSide);
+		m_sZcrHoldKey = AICF_ZcrAttackPlan.HoldKey(m_sSide, plan);
+		bool go = AICF_ZcrAttackPlan.Go(m_sZcrHoldKey);
 		if (!go && vector.DistanceXZ(leader, lane.m_vHold) <= 35)
 		{
-			AICF_ZcrAttackPlan.AtHold(m_sSide, numericSlot);
+			AICF_ZcrAttackPlan.AtHold(m_sZcrHoldKey, numericSlot);
 			m_bZcrHolding = true;
 			candidate = lane.m_vHold;
 			return true;
