@@ -445,7 +445,16 @@ class AICF_ContentProfile
 		}
 		if (prefab.Contains("UAZ452_transport.et"))
 		{
-			accessibleSeats = 8;
+			// ZCR, 30 Oct (Martin: "it can be just van bug that doesn't happen in other vehicles, can you verify?"; review
+			// notes 455-458): the UAZ-452's back is broken for the AI - in the van sub-lab (lab/vantest.py, 8 vans, US
+			// squads) the driver's and front passenger's seats took 56 of 56, the six back seats 2-14 of ~40 each, and
+			// those who got in mostly couldn't get out (6-15 per seat still inside 30 s after the get-out order); the M998
+			// and the Ural with the same soldiers 100% / 99.9%. So the van counts its two front seats: teams of up to 2
+			// keep it, bigger ones take the next candidate (the Ural). -aicfVanSeats N (8 = as before).
+			accessibleSeats = 2;
+			string vanSeats;
+			if (System.GetCLIParam("aicfVanSeats", vanSeats) && !vanSeats.IsEmpty())
+				accessibleSeats = Math.ClampInt(vanSeats.ToInt(), 1, 8);
 			hasPilot = true;
 			return kind != AICF_EVehicleKind.ARMED_LIGHT;
 		}
