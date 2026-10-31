@@ -38,7 +38,7 @@ class AICF_Stage3Config
 	static const float DEFAULT_SPAWN_STAGING_OFFSET_METERS = 43.0;
 	static const float DEFAULT_SPAWN_STAGING_RADIUS_METERS = 25.0;
 	static const int DEFAULT_SPAWN_STAGING_HOLD_MS = 3000;
-	static const int DEFAULT_SPAWN_APPROACH_TIMEOUT_MS = 90000;
+	static const int DEFAULT_SPAWN_APPROACH_TIMEOUT_MS = 180000;   // ZCR, 31 Oct: 90 s; the transport test, 3 runs each: failed rides 38% -> 13% (note 476)
 	// A fresh transport is useful only while a group retains a viable fireteam.
 	// A vehicle that is already assigned is
 	// deliberately not revoked when later losses take the group below this gate.
