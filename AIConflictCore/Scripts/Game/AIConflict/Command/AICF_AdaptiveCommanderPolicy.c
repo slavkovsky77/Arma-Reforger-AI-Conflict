@@ -167,9 +167,13 @@ class AICF_AdaptiveCommanderPolicy
 				base.IsBeingCaptured() || base.AreEnemiesPresent());
 			if (!friendly && !attackNodes.Contains(i))
 				continue;
-			if (friendly && (!base.GetSpawnPoint() || base.GetType() == SCR_ECampaignBaseType.RELAY ||
-				(!threatened && (!base.GetSpawnPoint().IsSpawnPointEnabled() || !base.GetSpawnPoint().IsSpawnPointActive()))))
+			if (friendly && (!base.GetSpawnPoint() || base.GetType() == SCR_ECampaignBaseType.RELAY))
 				continue;
+			// ZCR, 31 Oct: a quiet friendly base whose spawn point is not active yet (a base just taken or dealt) was dropped
+			// here, before the held-base rule below - so ZCR never saw it: the taken Signal Hill was left and every team walked
+			// home (the transport test, review note 474). Now kept on the list but off it (m_bZcrHeld) like a held base.
+			bool zcrInactive = friendly && !threatened &&
+				(!base.GetSpawnPoint().IsSpawnPointEnabled() || !base.GetSpawnPoint().IsSpawnPointActive());
 			AICF_AdaptiveCandidate candidate = new AICF_AdaptiveCandidate();
 			candidate.m_iNodeId = i;
 			candidate.m_Base = base;
@@ -205,6 +209,13 @@ class AICF_AdaptiveCommanderPolicy
 				candidate.m_bRecentLoss = true;
 			}
 			candidate.m_iConnectivity = Connectivity(i, now);
+			if (zcrInactive)
+			{
+				candidate.m_bAvailable = false;
+				candidate.m_bZcrHeld = true;
+				candidates.Insert(candidate);
+				continue;
+			}
 			// Без срочности ATTACK сохраняет наступательное назначение; слабый отряд
 			// получает только безопасный HQ hold. DEFEND держит передний край.
 			if (friendly && !threatened)
