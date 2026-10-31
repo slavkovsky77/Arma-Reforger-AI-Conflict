@@ -650,6 +650,39 @@ class AICF_VehicleSpawner
 		return false;
 	}
 
+	// ZCR (31 Oct, the transport integration test - review note 479): the empty-ground search goes out in rings from the
+	// base's spawn point and the first clear spot won - at Military Training Area (1386,1858) in the training junkyard,
+	// 40 m of rubble and hedgehogs from the road: 13 of the test's 44 stuck-vehicle lines were rides leaving its two
+	// pads. -aicfPadNearRoadMeters N (0 = off): spots within N m of a road are tried first, the rest after as before.
+	protected static float ZcrPadRoadMeters()
+	{
+		string value;
+		if (System.GetCLIParam("aicfPadNearRoadMeters", value) && !value.IsEmpty())
+			return Math.Clamp(value.ToFloat(), 0, 40);
+		return 0;
+	}
+
+	protected void ZcrRoadPadsFirst(array<vector> positions, float meters)
+	{
+		SCR_AIWorld ai = SCR_AIWorld.Cast(GetGame().GetAIWorld());
+		if (!ai || !ai.GetRoadNetworkManager())
+			return;
+		array<vector> byRoad = {};
+		array<vector> rest = {};
+		foreach (vector p : positions)
+		{
+			vector onRoad = p;
+			vector direction;
+			if (FIAGarrisonRoadDirection(ai.GetRoadNetworkManager(), onRoad, direction, meters))
+				byRoad.Insert(p);
+			else
+				rest.Insert(p);
+		}
+		positions.Clear();
+		positions.InsertAll(byRoad);
+		positions.InsertAll(rest);
+	}
+
 	bool IsSiteReservationCurrent(
 		AICF_VehicleSpawnSiteReservation reservation,
 		AICF_TransportTrip trip,
@@ -1612,18 +1645,24 @@ class AICF_VehicleSpawner
 			searchCenter = baseSpawnPoint.GetOrigin();
 
 		array<vector> positions = {};
+		float roadMeters = ZcrPadRoadMeters();
+		int maxPositions = MAX_SPAWN_POSITIONS_PER_BASE;
+		if (roadMeters > 0)
+			maxPositions = 48;
 		result.m_iCandidatePositionCount = SCR_WorldTools.FindAllEmptyTerrainPositions(
 			positions,
 			searchCenter,
 			SPAWN_SEARCH_RADIUS_METERS,
 			VEHICLE_CLEARANCE_RADIUS_METERS,
-			maxResults: MAX_SPAWN_POSITIONS_PER_BASE,
+			maxResults: maxPositions,
 			world: candidateOwner.GetWorld());
 		if (result.m_iCandidatePositionCount <= 0)
 		{
 			result.m_sResult = "NO_EMPTY_TERRAIN";
 			return result;
 		}
+		if (roadMeters > 0)
+			ZcrRoadPadsFirst(positions, roadMeters);
 
 		int rejectedSurfaceCount;
 		bool foundValidatedSurface;
