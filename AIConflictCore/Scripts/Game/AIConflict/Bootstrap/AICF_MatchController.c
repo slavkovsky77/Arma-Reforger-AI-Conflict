@@ -6554,8 +6554,8 @@ class AICF_MatchController
 		if (m_bRosterReady || !m_USState || !m_USSRState)
 			return;
 
-		if (m_USState.CountSlotsByState(AICF_EGroupSlotState.READY) != AICF_Stage1Config.SquadsPerSide() ||
-			m_USSRState.CountSlotsByState(AICF_EGroupSlotState.READY) != AICF_Stage1Config.SquadsPerSide())
+		if (m_USState.CountSlotsByState(AICF_EGroupSlotState.READY) != AICF_Stage1Config.SquadsFor("US") ||
+			m_USSRState.CountSlotsByState(AICF_EGroupSlotState.READY) != AICF_Stage1Config.SquadsFor("USSR"))
 			return;
 
 		m_bRosterReady = true;

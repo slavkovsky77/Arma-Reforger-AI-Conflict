@@ -95,6 +95,17 @@ class AICF_Stage1Config
 		return s_iSquadsPerSide;
 	}
 
+	// ZCR (31 Oct, the transport integration test - Martin: "transport test should only have one side like supply test"):
+	// -aicfNoForces USSR (or US) - that side fields no teams at all; the commander mode alone still spawned its 12 teams.
+	static int SquadsFor(FactionKey factionKey)
+	{
+		string none;
+		if (System.GetCLIParam("aicfNoForces", none) && !none.IsEmpty() &&
+			AICF_ContentProfile.GetActive().GetStableFactionKey(factionKey) == none)
+			return 0;
+		return SquadsPerSide();
+	}
+
 	static int GetDefaultGroupSizeForSlot(int slotId)
 	{
 		if (slotId >= 0 && slotId < DEFAULT_FULL_SIZE_GROUPS_PER_FACTION)
