@@ -414,7 +414,13 @@ class AICF_ContentProfile
 			if (stableKey == "US")
 				suffixes.Insert("Prefabs/Vehicles/Wheeled/M998/M998_covered_long.et");
 			else if (stableKey == "USSR")
+			{
+				// ZCR, 31 Oct (Martin: "why dont you use uaz and some smaller cars for smaller teams?"; note 465): the UAZ-469
+				// jeep first - 4 seats counted, so the 4-man teams ride it instead of a 15-seat Ural (the van fits 2 since
+				// 30 Oct). Van sub-lab, Soviet squads: 99.8% aboard, 10 s to board (the Ural 99.9%, 10 s; the van 61-76%).
+				suffixes.Insert("Prefabs/Vehicles/Wheeled/UAZ469/UAZ469.et");
 				suffixes.Insert("Prefabs/Vehicles/Wheeled/UAZ452/UAZ452_transport.et");
+			}
 		}
 
 		if (stableKey == "US")
@@ -455,6 +461,13 @@ class AICF_ContentProfile
 			string vanSeats;
 			if (System.GetCLIParam("aicfVanSeats", vanSeats) && !vanSeats.IsEmpty())
 				accessibleSeats = Math.ClampInt(vanSeats.ToInt(), 1, 8);
+			hasPilot = true;
+			return kind != AICF_EVehicleKind.ARMED_LIGHT;
+		}
+		// ZCR, 31 Oct: the UAZ-469 jeep (no gun) - 5 seats, the AI used all 5 in the van sub-lab; 4 counted, as the M998.
+		if (prefab.Contains("UAZ469/UAZ469.et"))
+		{
+			accessibleSeats = 4;
 			hasPilot = true;
 			return kind != AICF_EVehicleKind.ARMED_LIGHT;
 		}
