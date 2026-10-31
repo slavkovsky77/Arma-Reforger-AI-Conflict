@@ -654,12 +654,14 @@ class AICF_VehicleSpawner
 	// base's spawn point and the first clear spot won - at Military Training Area (1386,1858) in the training junkyard,
 	// 40 m of rubble and hedgehogs from the road: 13 of the test's 44 stuck-vehicle lines were rides leaving its two
 	// pads. -aicfPadNearRoadMeters N (0 = off): spots within N m of a road are tried first, the rest after as before.
+	// On by default (12 m) from 31 Oct 22:40 (note 479): the main base's pads moved onto its road; Military Training Area has
+	// no spot by its road flat enough (1.0-1.5 m under the vehicle, the slope guard's limit 1.0) and keeps its junkyard pads.
 	protected static float ZcrPadRoadMeters()
 	{
 		string value;
 		if (System.GetCLIParam("aicfPadNearRoadMeters", value) && !value.IsEmpty())
 			return Math.Clamp(value.ToFloat(), 0, 40);
-		return 0;
+		return 12;
 	}
 
 	protected static ref map<string, int> s_mZcrPadRoadLogAt = new map<string, int>();

@@ -1125,7 +1125,8 @@ class AICF_VehicleBoardingFlow
 	// ZCR (31 Oct, the transport integration test - review note 479): a team waits ~60 m from its vehicle (median of 114
 	// boardings), and the crew phase moved only soldiers beyond the 90 m staging distance - so the passengers stood idle
 	// while the driver ran over and got in (24 s), then ran the same 60 m themselves (the passenger phase, 36 s).
-	// -aicfWalkOverMeters N (0 / unset = off): during the driver and gunner phases the others walk to within N m.
+	// -aicfWalkOverMeters N (0 = off): during the driver and gunner phases the others walk to within N m. On by default
+	// (12 m) from 31 Oct 22:40: boarding 60 s -> 35-39 s, the wait at the base 90-100 s -> 65-71 s (3 runs, note 479).
 	protected float ZcrApproachMeters(AICF_VehicleBoardingState state)
 	{
 		float threshold = GetStagingThresholdMeters();
@@ -1133,7 +1134,7 @@ class AICF_VehicleBoardingFlow
 			return threshold;
 		string value;
 		if (!System.GetCLIParam("aicfWalkOverMeters", value) || value.IsEmpty())
-			return threshold;
+			value = "12";
 		float meters = value.ToFloat();
 		if (meters <= 0)
 			return threshold;
