@@ -615,6 +615,9 @@ class AICF_VehicleCoordinator
 			"STRATEGIC_ASSIGNMENT_ADMITTED");
 		if (!admitted)
 			return;
+		IEntity zcrRider = AICF_GroupRuntime.ResolveAliveLeader(assignment.GetGroup());
+		if (zcrRider)
+			ZcrRideStarted(assignment.GetFactionKey(), zcrRider.GetOrigin());
 		ConsumeExplicitVehicleAdmission(assignment);
 		AICF_ETransportTripPhase admittedPhase = admitted.GetPhase();
 		int admittedTransitions = admitted.GetTransitionCount();
@@ -707,6 +710,15 @@ class AICF_VehicleCoordinator
 			if (ridesPerBase > 0 && ZcrRidesLeaving(assignment.GetFactionKey(), marcher.GetOrigin(), slot.GetSlotId()) >= ridesPerBase)
 			{
 				reason = "ZCR_BASE_BUSY";
+				return false;
+			}
+			// ZCR (1 Nov, Martin: "cap is retarted maybe some kind of timing so its not at once but fuck cap"; note 481): the cap
+			// held a team for 78-160 s while it walked off, and most trips walked the whole way because of it (note 480). Rides
+			// out of one base now start at least -aicfRideSpacingMs apart (game time, default 8000; 0 = off) - a burst at the HQ is
+			// spread over seconds.
+			if (ZcrRideTooSoon(assignment.GetFactionKey(), marcher.GetOrigin()))
+			{
+				reason = "ZCR_RIDE_SPACING";
 				return false;
 			}
 		}
@@ -926,6 +938,49 @@ class AICF_VehicleCoordinator
 				return true;
 		}
 		return false;
+	}
+
+	protected ref array<string> m_aZcrRideFaction = {};
+	protected ref array<vector> m_aZcrRideAt = {};
+	protected ref array<float> m_aZcrRideAtMs = {};
+
+	static int ZcrRideSpacingMs()
+	{
+		string value;
+		if (System.GetCLIParam("aicfRideSpacingMs", value) && !value.IsEmpty())
+			return Math.Max(0, value.ToInt());
+		return 8000;
+	}
+
+	// A ride of this side started within the spacing (game time) by a team within -aicfRideFromBaseMeters (at least 150 m).
+	protected bool ZcrRideTooSoon(FactionKey factionKey, vector spot)
+	{
+		int spacing = ZcrRideSpacingMs();
+		if (spacing <= 0)
+			return false;
+		float now = GetGame().GetWorld().GetWorldTime();
+		float meters = Math.Max(150, ZcrRideFromBaseMeters());
+		bool tooSoon;
+		for (int index = m_aZcrRideAtMs.Count() - 1; index >= 0; index--)
+		{
+			if (now - m_aZcrRideAtMs[index] >= spacing)
+			{
+				m_aZcrRideAtMs.RemoveOrdered(index);
+				m_aZcrRideAt.RemoveOrdered(index);
+				m_aZcrRideFaction.RemoveOrdered(index);
+				continue;
+			}
+			if (m_aZcrRideFaction[index] == factionKey && vector.DistanceXZ(m_aZcrRideAt[index], spot) <= meters)
+				tooSoon = true;
+		}
+		return tooSoon;
+	}
+
+	protected void ZcrRideStarted(FactionKey factionKey, vector spot)
+	{
+		m_aZcrRideFaction.Insert(factionKey);
+		m_aZcrRideAt.Insert(spot);
+		m_aZcrRideAtMs.Insert(GetGame().GetWorld().GetWorldTime());
 	}
 
 	static int ZcrRidesPerBase()
