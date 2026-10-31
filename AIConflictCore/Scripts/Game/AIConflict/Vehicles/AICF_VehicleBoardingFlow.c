@@ -774,6 +774,17 @@ class AICF_VehicleBoardingFlow
 			AICF_EVehicleBoardingPhase.PASSENGERS,
 			state.GetCurrentPhaseIndex() + 1,
 			System.GetTickCount());
+		// ZCR (31 Oct): the crew phase's walk-over moves (-aicfWalkOverMeters) end here, the passengers' get-ins take over.
+		AICF_VehicleBoardingTokenSet walkOver = state.GetTokens();
+		for (int walkIndex = walkOver.Count() - 1; walkIndex >= 0; walkIndex--)
+		{
+			AICF_VehicleBoardingActionToken walkToken = walkOver.Get(walkIndex);
+			if (!walkToken || !walkToken.GetApproachAction())
+				continue;
+			walkToken.CancelOwnerSafe();
+			state.RemoveActionFence(walkToken.GetFence());
+			walkOver.Remove(walkToken);
+		}
 		ReportPhaseStarted(
 			trip,
 			lease,
@@ -1111,6 +1122,24 @@ class AICF_VehicleBoardingFlow
 		return Math.Min(STAGING_THRESHOLD_METERS, m_Config.GetMaximumReuseDistanceMeters());
 	}
 
+	// ZCR (31 Oct, the transport integration test - review note 479): a team waits ~60 m from its vehicle (median of 114
+	// boardings), and the crew phase moved only soldiers beyond the 90 m staging distance - so the passengers stood idle
+	// while the driver ran over and got in (24 s), then ran the same 60 m themselves (the passenger phase, 36 s).
+	// -aicfWalkOverMeters N (0 / unset = off): during the driver and gunner phases the others walk to within N m.
+	protected float ZcrApproachMeters(AICF_VehicleBoardingState state)
+	{
+		float threshold = GetStagingThresholdMeters();
+		if (!state || state.GetPhase() == AICF_EVehicleBoardingPhase.APPROACH)
+			return threshold;
+		string value;
+		if (!System.GetCLIParam("aicfWalkOverMeters", value) || value.IsEmpty())
+			return threshold;
+		float meters = value.ToFloat();
+		if (meters <= 0)
+			return threshold;
+		return Math.Min(threshold, Math.Max(10, meters));
+	}
+
 	protected int GetRoleResetTimeoutMs()
 	{
 		int timeoutMs = m_Config.GetBoardingTimeoutMs() / 2;
@@ -1320,7 +1349,7 @@ class AICF_VehicleBoardingFlow
 	{
 		failureReason = string.Empty;
 		Vehicle vehicle = lease.GetVehicle();
-		float thresholdMeters = GetStagingThresholdMeters();
+		float thresholdMeters = ZcrApproachMeters(state);
 		float radiusMeters = Math.Max(
 			5.0,
 			Math.Min(APPROACH_ACTION_RADIUS_METERS, thresholdMeters - 5.0));
@@ -1369,7 +1398,7 @@ class AICF_VehicleBoardingFlow
 	{
 		failureReason = string.Empty;
 		Vehicle vehicle = lease.GetVehicle();
-		float thresholdMeters = GetStagingThresholdMeters();
+		float thresholdMeters = ZcrApproachMeters(state);
 		float radiusMeters = Math.Max(
 			5.0,
 			Math.Min(APPROACH_ACTION_RADIUS_METERS, thresholdMeters - 5.0));
@@ -1406,6 +1435,10 @@ class AICF_VehicleBoardingFlow
 				actionState == EAIActionState.FAILED;
 			bool stalled = token.GetProgressAgeMs() >= APPROACH_STALL_MS;
 			if (!terminal && !stalled)
+				continue;
+			// ZCR (31 Oct): a walk-over move inside the staging distance (-aicfWalkOverMeters) that ends or stalls short is
+			// left as it is - the passenger phase orders him in from where he stands, as before.
+			if (distanceMeters <= GetStagingThresholdMeters())
 				continue;
 			if (token.GetRetryCount() >= APPROACH_MAX_RETRIES)
 			{
