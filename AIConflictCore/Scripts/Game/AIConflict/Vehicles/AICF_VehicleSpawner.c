@@ -662,7 +662,9 @@ class AICF_VehicleSpawner
 		return 0;
 	}
 
-	protected void ZcrRoadPadsFirst(array<vector> positions, float meters)
+	protected static ref map<string, int> s_mZcrPadRoadLogAt = new map<string, int>();
+
+	protected void ZcrRoadPadsFirst(array<vector> positions, float meters, vector center)
 	{
 		SCR_AIWorld ai = SCR_AIWorld.Cast(GetGame().GetAIWorld());
 		if (!ai || !ai.GetRoadNetworkManager())
@@ -681,6 +683,17 @@ class AICF_VehicleSpawner
 		positions.Clear();
 		positions.InsertAll(byRoad);
 		positions.InsertAll(rest);
+		// [ZCR][PADROAD] t= center= spots= by_road= first= - once in 2 min a base: how many clear spots a base has by a road.
+		int now = Math.Round(GetGame().GetWorld().GetWorldTime() / 1000);
+		string key = string.Format("%1,%2", Math.Round(center[0]), Math.Round(center[2]));
+		int last;
+		if (s_mZcrPadRoadLogAt.Find(key, last) && now - last < 120)
+			return;
+		s_mZcrPadRoadLogAt.Set(key, now);
+		string first = "-";
+		if (!positions.IsEmpty())
+			first = string.Format("%1,%2", Math.Round(positions[0][0]), Math.Round(positions[0][2]));
+		Print(string.Format("[ZCR][PADROAD] t=%1 center=%2 spots=%3 by_road=%4 first=%5", now, key, positions.Count(), byRoad.Count(), first), LogLevel.NORMAL);
 	}
 
 	bool IsSiteReservationCurrent(
@@ -1662,7 +1675,7 @@ class AICF_VehicleSpawner
 			return result;
 		}
 		if (roadMeters > 0)
-			ZcrRoadPadsFirst(positions, roadMeters);
+			ZcrRoadPadsFirst(positions, roadMeters, searchCenter);
 
 		int rejectedSurfaceCount;
 		bool foundValidatedSurface;
