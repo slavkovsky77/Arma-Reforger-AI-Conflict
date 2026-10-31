@@ -168,6 +168,10 @@ class AICF_Stage3Config
 			speed = Math.Max(1, value.ToFloat());
 		m_iBoardingTimeoutMs = Math.Max(10000, 75000 / speed);
 		m_iPassengerBoardingTimeoutMs = Math.Max(10000, 90000 / speed);
+		// ZCR, 31 Oct (the transport test, note 475): the walk to the vehicle spot too - 90 real seconds were 30 game
+		// seconds at the watched 3x; most failed rides were SPAWN_SITE_APPROACH_TIMEOUT. -aicfVehicleSpawnApproachTimeoutMs
+		// still sets it (game ms).
+		m_iSpawnApproachTimeoutMs = Math.Max(20000, m_iSpawnApproachTimeoutMs / speed);
 		if (System.GetCLIParam("aicfTransportVehiclesPerFaction", value))
 			m_iTransportVehiclesPerFaction = ClampInt(value.ToInt(), 0, AICF_Stage1Config.GROUP_SLOTS_PER_FACTION);
 		if (System.GetCLIParam("aicfArmedLightVehiclesPerFaction", value))
