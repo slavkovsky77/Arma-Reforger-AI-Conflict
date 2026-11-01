@@ -874,7 +874,12 @@ class AICF_VehicleCoordinator
 			terminalOutcome,
 			ResolveTerminalFailureDomain(trip.GetPreviousPhase(), terminalOutcome));
 		if (trip.GetPhase() == AICF_ETransportTripPhase.FALLBACK)
-			ZcrRideFailed(trip.GetFactionKey(), trip.GetSlotId(), trip.GetTerminalReason());
+		{
+			IEntity zcrLeader;
+			if (trip.GetAssignment())
+				zcrLeader = AICF_GroupRuntime.ResolveAliveLeader(trip.GetAssignment().GetGroup());
+			ZcrRideFailed(trip.GetFactionKey(), trip.GetSlotId(), trip.GetTerminalReason(), zcrLeader);
+		}
 	}
 
 	// ZCR (26 Oct night): a team whose ride failed (boarding not done in time, the pad not reached, the vehicle stuck...)
@@ -895,7 +900,26 @@ class AICF_VehicleCoordinator
 		return 180000 / speed;
 	}
 
-	protected void ZcrRideFailed(FactionKey faction, int slotId, string why)
+	// ZCR (2 Nov, notes 489-491 - Martin, watching: "they had a perfectly fine car and they walk", "team d1 is walking
+	// 1700m"): a ride that fails while the team is still at a base (a soldier not boarding in time, the driver out of his
+	// seat, the vehicle stuck by the pad) gets one short wait and a new ride, not the 3 minutes: in those 3 minutes the
+	// team walked past 250 m from the base, where it may not ride any more, and walked the whole trip (1-1.7 km; 3 of
+	// Martin's 4 reports in the watched run). A second failure at a base within 5 minutes: the 3 minutes as before (the
+	// request-fail loop the cooldown is there for). -aicfBaseFailWaitMs N (0: as before); real ms divided by -zcrSpeed.
+	protected ref map<string, int> m_mZcrBaseFailAt = new map<string, int>();
+
+	protected static int ZcrBaseFailWaitMs()
+	{
+		string value;
+		if (System.GetCLIParam("aicfBaseFailWaitMs", value) && !value.IsEmpty())
+			return Math.Max(0, value.ToInt());
+		float speed = 1;
+		if (System.GetCLIParam("zcrSpeed", value) && !value.IsEmpty())
+			speed = Math.Max(1, value.ToFloat());
+		return 20000 / speed;
+	}
+
+	protected void ZcrRideFailed(FactionKey faction, int slotId, string why, IEntity leader)
 	{
 		int ms = ZcrRideCooldownMs();
 		if (ms <= 0)
@@ -905,8 +929,24 @@ class AICF_VehicleCoordinator
 		// next trip (1.2-2.1 km; 5 of the run's 7 long trips on foot). No cooldown for it; -aicfDropoffCooldown as before.
 		if (why == "DISEMBARK_TIMEOUT" && !System.IsCLIParam("aicfDropoffCooldown"))
 			return;
-		m_mZcrRideCooldownUntil.Set(faction + ":" + slotId, System.GetTickCount() + ms);
-		Print(string.Format("[ZCR][RIDE] faction=%1 slot=%2 failed=%3 walks_ms=%4", faction, slotId, why, ms), LogLevel.NORMAL);
+		string key = faction + ":" + slotId;
+		int now = System.GetTickCount();
+		int shortMs = ZcrBaseFailWaitMs();
+		string atBase = "0";
+		if (shortMs > 0 && leader && ZcrNearRideBase(faction, leader.GetOrigin()))
+		{
+			int lastAt;
+			if (!m_mZcrBaseFailAt.Find(key, lastAt) || now - lastAt > ZcrRideCooldownMs() * 5 / 3)
+			{
+				m_mZcrBaseFailAt.Set(key, now);
+				ms = shortMs;
+				atBase = "1";
+			}
+			else
+				atBase = "again";
+		}
+		m_mZcrRideCooldownUntil.Set(key, now + ms);
+		Print(string.Format("[ZCR][RIDE] faction=%1 slot=%2 failed=%3 walks_ms=%4 at_base=%5", faction, slotId, why, ms, atBase), LogLevel.NORMAL);
 	}
 
 	static float ZcrRideFromBaseMeters()

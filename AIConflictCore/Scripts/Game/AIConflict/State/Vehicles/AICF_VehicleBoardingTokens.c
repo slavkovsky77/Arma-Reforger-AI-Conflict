@@ -54,6 +54,7 @@ class AICF_VehicleBoardingActionToken
 	protected bool m_bHiddenExactSeatRecoveryAttempted;
 	protected int m_iHiddenExactSeatRecoveryScheduledAtMs;
 	protected bool m_bAnimatedExactSeatRecoveryAttempted;
+	protected bool m_bZcrFailedGetIn;
 	protected bool m_bAnimatedExactSeatRecoveryAccepted;
 	protected int m_iAnimatedExactSeatRecoveryAtMs;
 	protected int m_iAnimatedExactSeatRecoveryDoorIndex = -1;
@@ -321,6 +322,13 @@ class AICF_VehicleBoardingActionToken
 		return true;
 	}
 
+	// ZCR (2 Nov, note 490): the stock get-in FAILED after the last retry - the soldier stands idle and no action owns
+	// him any more, so the seat may be forced without one (ApplyHiddenExactSeatRecovery's ownership check).
+	void ZcrMarkFailedGetIn()
+	{
+		m_bZcrFailedGetIn = true;
+	}
+
 	bool IsHiddenExactSeatRecoveryPending()
 	{
 		return m_bHiddenExactSeatRecoveryPending;
@@ -352,7 +360,7 @@ class AICF_VehicleBoardingActionToken
 		}
 		bool stockActionOwned = IsTrackedActionCurrent() &&
 			IsTrackedActionOwnedByUtility();
-		if (!stockActionOwned && !m_bAnimatedExactSeatRecoveryAttempted)
+		if (!stockActionOwned && !m_bAnimatedExactSeatRecoveryAttempted && !m_bZcrFailedGetIn)
 			return false;
 
 		CompartmentAccessComponent access = ResolveAccess(m_ReservedEntity);

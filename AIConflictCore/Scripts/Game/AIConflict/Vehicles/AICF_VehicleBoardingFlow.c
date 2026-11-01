@@ -2663,10 +2663,19 @@ class AICF_VehicleBoardingFlow
 			if (recoveryBudgetExhausted ||
 				(animatedRecoveryExpired && transitioning))
 			{
-				if ((runningStalled || animatedRecoveryExpired || trackedRetryOrphaned) &&
+				// ZCR (2 Nov, note 490 - Martin: "they had a perfectly fine car and they walk"): a get-in that FAILED
+				// after the last retry also gets the seat; before, only a stalled one did, and a soldier whose order
+				// failed 2 m from the door stood idle until the boarding deadline sank the whole ride (9 of 40
+				// boarding timeouts in 39 transport runs). -aicfNoFailedSeat: as before.
+				bool zcrFailedSeat = actionTerminal && !System.IsCLIParam("aicfNoFailedSeat");
+				if ((runningStalled || animatedRecoveryExpired || trackedRetryOrphaned || zcrFailedSeat) &&
 					token.ScheduleHiddenExactSeatRecovery())
 				{
+					if (zcrFailedSeat)
+						token.ZcrMarkFailedGetIn();
 					string hiddenReason = "REPEATED_RUNNING_STALL";
+					if (zcrFailedSeat)
+						hiddenReason = "ZCR_FAILED_GET_IN";
 					if (animatedRecoveryExpired)
 						hiddenReason = "TRACKED_EXACT_CARGO_OBSERVATION_EXPIRED";
 					else if (trackedRetryOrphaned)

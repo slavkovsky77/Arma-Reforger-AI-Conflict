@@ -2640,6 +2640,13 @@ class AICF_OrderPlanner
 		}
 		if (zcrHold)
 			waypointPrefab = DEFEND_WAYPOINT_PREFAB;
+		// ZCR (2 Nov, note 494 - Martin: "team d1 now has defend airport base but they chill at hose somwhere completely
+		// different"): a defend team's recovery leg (a step of the route after a false completion or a failed ride) was a
+		// defend waypoint with the 1-hour hold, so the team held at the step - D1 at a house 130 m from Arleville, 2.2 km
+		// from the base it defends. A leg that ends short of the base is a plain operational leg; the defend order
+		// comes when the team is there. -aicfDefendLegHold: as before.
+		bool zcrDefendLeg;
+		vector zcrObjective = targetPosition;
 		if (!isRelay && endpointRevision > 0)
 		{
 			vector recoveryEndpoint;
@@ -2654,6 +2661,10 @@ class AICF_OrderPlanner
 			if (endpointResolved)
 			{
 				targetPosition = recoveryEndpoint;
+				zcrDefendLeg = role != AICF_EGroupRole.ATTACK && !System.IsCLIParam("aicfDefendLegHold") &&
+					vector.DistanceXZ(recoveryEndpoint, zcrObjective) > DEFEND_RADIUS_METERS;
+				if (zcrDefendLeg)
+					waypointPrefab = ATTACK_OPERATIONAL_WAYPOINT_PREFAB;
 			}
 			else
 			{
@@ -2708,7 +2719,7 @@ class AICF_OrderPlanner
 			relayWaypoint.SetSmartActionEntity(target.GetOwner(), RELAY_SMART_ACTION_TAG);
 			waypoint.SetCompletionType(EAIWaypointCompletionType.Any);
 		}
-		else if (role == AICF_EGroupRole.ATTACK)
+		else if (role == AICF_EGroupRole.ATTACK || zcrDefendLeg)
 		{
 			// A long strategic leg is complete only after the whole living formation
 			// reaches it. Leader completion allowed a separated leader to terminate a
@@ -2738,7 +2749,7 @@ class AICF_OrderPlanner
 		}
 
 		// ZCR: a defend order at a building anchor holds its 25 m round the houses.
-		if (role != AICF_EGroupRole.ATTACK && !isRelay)
+		if (role != AICF_EGroupRole.ATTACK && !isRelay && !zcrDefendLeg)
 		{
 			vector anchor;
 			vector spawnAt;

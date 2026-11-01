@@ -272,6 +272,9 @@ class AICF_VehicleTransitFlow
 		if (targetDistanceMeters <= m_Config.GetDismountDistanceMeters())
 			return AICF_TripOutcome.StartDismount("TACTICAL_TARGET_WITHIN_DISMOUNT_RANGE", causationId);
 
+		if (state.GetAssignmentRevision() < 0 &&
+			!ZcrDepartureClear(trip.GetFactionKey(), vehicle, trip.GetOperationId(), nowMs))
+			return AICF_TripOutcome.Wait("ZCR_DEPARTURE_QUEUE", causationId);
 		bool safeReuseRetarget = state.GetAssignmentRevision() >= 0 &&
 			state.GetAssignmentRevision() != assignment.GetAssignmentRevision();
 		return CreateAndStageRoute(
@@ -282,6 +285,111 @@ class AICF_VehicleTransitFlow
 			string.Empty,
 			false,
 			false);
+	}
+
+	// ZCR (2 Nov, note 486 - Martin, watching the start: "a bit traffic jam at start they really should do it more in
+	// queue", "when there are a lot of vehicles close there should be queieng"): 12 boarded vehicles left one HQ within
+	// 16 s, from spots in a 125 x 110 m patch, some in opposite directions - 55-170 s to get 250 m out (~30 s on a clear
+	// road), one never got out. A boarded vehicle now leaves only when no vehicle of its side left from within
+	// ZCR_DEPART_QUEUE_M of it in the last -aicfDepartGapMs (default 6000) - sooner once that one is ZCR_DEPART_CLEAR_M on
+	// its way - and the longest waiter nearby goes first; after -aicfDepartMaxWaitMs (default 60000) it goes anyway.
+	// The team waits aboard (the old ride spacing refused the ride and the team walked). Real ms divided by -zcrSpeed;
+	// -aicfDepartGapMs 0: off. [ZCR][DEPART] faction= op= waited_ms= queue= x= z= on each departure that waited.
+	static const float ZCR_DEPART_QUEUE_M = 120;
+	static const float ZCR_DEPART_CLEAR_M = 40;
+	protected static ref array<string> s_aZcrDepartFaction = {};
+	protected static ref array<vector> s_aZcrDepartAt = {};
+	protected static ref array<int> s_aZcrDepartMs = {};
+	protected static ref array<IEntity> s_aZcrDepartVehicle = {};
+	protected static ref map<string, int> s_mZcrWaitSince = new map<string, int>();
+	protected static ref map<string, int> s_mZcrWaitSeen = new map<string, int>();
+	protected static ref map<string, vector> s_mZcrWaitAt = new map<string, vector>();
+	protected static ref map<string, string> s_mZcrWaitFaction = new map<string, string>();
+
+	protected static int ZcrDepartMs(string param, int defaultMs)
+	{
+		string value;
+		if (System.GetCLIParam(param, value) && !value.IsEmpty())
+			return Math.Max(0, value.ToInt());
+		float speed = 1;
+		if (System.GetCLIParam("zcrSpeed", value) && !value.IsEmpty())
+			speed = Math.Max(1, value.ToFloat());
+		return defaultMs / speed;
+	}
+
+	protected static bool ZcrDepartureClear(string faction, IEntity vehicle, string op, int nowMs)
+	{
+		int gapMs = ZcrDepartMs("aicfDepartGapMs", 6000);
+		if (gapMs <= 0 || !vehicle)
+			return true;
+		vector at = vehicle.GetOrigin();
+		int since;
+		if (!s_mZcrWaitSince.Find(op, since))
+		{
+			since = nowMs;
+			s_mZcrWaitSince.Set(op, nowMs);
+		}
+		s_mZcrWaitSeen.Set(op, nowMs);
+		s_mZcrWaitAt.Set(op, at);
+		s_mZcrWaitFaction.Set(op, faction);
+		bool go = nowMs - since >= ZcrDepartMs("aicfDepartMaxWaitMs", 60000);
+		int queue;
+		if (!go)
+		{
+			for (int i = s_aZcrDepartMs.Count() - 1; i >= 0; i--)
+			{
+				if (nowMs - s_aZcrDepartMs[i] > gapMs)
+				{
+					s_aZcrDepartFaction.Remove(i);
+					s_aZcrDepartAt.Remove(i);
+					s_aZcrDepartMs.Remove(i);
+					s_aZcrDepartVehicle.Remove(i);
+					continue;
+				}
+				if (s_aZcrDepartFaction[i] != faction || vector.DistanceXZ(s_aZcrDepartAt[i], at) > ZCR_DEPART_QUEUE_M)
+					continue;
+				IEntity ahead = s_aZcrDepartVehicle[i];
+				bool clear = !ahead || vector.DistanceXZ(ahead.GetOrigin(), s_aZcrDepartAt[i]) >= ZCR_DEPART_CLEAR_M;
+				if (!clear || nowMs - s_aZcrDepartMs[i] < gapMs / 3)
+					return false;
+			}
+			// The longest waiter nearby first (waiters not seen for 3 s are gone).
+			array<string> gone = {};
+			foreach (string other, int otherSince : s_mZcrWaitSince)
+			{
+				if (other == op)
+					continue;
+				if (nowMs - s_mZcrWaitSeen.Get(other) > 3000)
+				{
+					gone.Insert(other);
+					continue;
+				}
+				if (s_mZcrWaitFaction.Get(other) != faction || vector.DistanceXZ(s_mZcrWaitAt.Get(other), at) > ZCR_DEPART_QUEUE_M)
+					continue;
+				queue++;
+				if (otherSince < since)
+					return false;
+			}
+			foreach (string g : gone)
+			{
+				s_mZcrWaitSince.Remove(g);
+				s_mZcrWaitSeen.Remove(g);
+				s_mZcrWaitAt.Remove(g);
+				s_mZcrWaitFaction.Remove(g);
+			}
+		}
+		s_aZcrDepartFaction.Insert(faction);
+		s_aZcrDepartAt.Insert(at);
+		s_aZcrDepartMs.Insert(nowMs);
+		s_aZcrDepartVehicle.Insert(vehicle);
+		if (nowMs - since > 500)
+			Print(string.Format("[ZCR][DEPART] faction=%1 op=%2 waited_ms=%3 queue=%4 x=%5 z=%6", faction, op, nowMs - since, queue,
+				Math.Round(at[0]), Math.Round(at[2])), LogLevel.NORMAL);
+		s_mZcrWaitSince.Remove(op);
+		s_mZcrWaitSeen.Remove(op);
+		s_mZcrWaitAt.Remove(op);
+		s_mZcrWaitFaction.Remove(op);
+		return true;
 	}
 
 	AICF_TripOutcome Tick(AICF_TransportTrip trip, string causationId)
