@@ -2,7 +2,10 @@
 // There are deliberately no faction-specific parallel arrays.
 class AICF_FactionFleet
 {
-	static const int HARD_MAX_ACTIVE_OR_RESERVED = 10;
+	// ZCR (1 Nov, note 484): 12, not 10 - the transport test's 12 teams all ask at the start and two were refused
+	// (VEHICLE_CAP_UNAVAILABLE_PRE_ADMISSION), walked off and were past 250 m from the HQ: 2.1 km on foot. The config's
+	// -aicfMaxVehiclesPerFaction (default 16) is still capped here.
+	static const int HARD_MAX_ACTIVE_OR_RESERVED = 12;
 
 	protected FactionKey m_sFactionKey;
 	protected int m_iMaximumActiveOrReserved;

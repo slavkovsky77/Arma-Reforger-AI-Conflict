@@ -321,7 +321,8 @@ class AICF_VehicleAcquisitionFlow
 				return EndRequest(trip, fleet, requestState, "SITE_PREFLIGHT_TERMINAL", nowMs);
 			if (PadWaitOver(requestState, nowMs))
 				return EndRequest(trip, fleet, requestState, "SITE_WAIT_LIMIT", nowMs);
-			int nextProbeAtMs = nowMs + m_Config.GetWaitProbeIntervalMs();
+			// ZCR (1 Nov, note 484): within the 45-s pad wait, look again every 10 s, not once at 60 s (after the wait is over).
+			int nextProbeAtMs = nowMs + ZcrSiteRelookMs();
 			requestState.ClearNoRangeObservation();
 			requestState.EnterWaitingForSite(nowMs, nextProbeAtMs, selection.m_sFailureReason);
 			ReportWaitHeartbeat(
@@ -1674,7 +1675,12 @@ class AICF_VehicleAcquisitionFlow
 		string reason,
 		int nowMs)
 	{
-		int nextProbeAtMs = nowMs + m_Config.GetWaitProbeIntervalMs();
+		// ZCR (1 Nov, Martin watching the transport test: "really the only should walk long distances when car broke down";
+		// note 484): the spot found taken at the last check (SPAWN_PAD_OCCUPIED - another team's vehicle had just appeared
+		// there) waited the whole 60-s probe interval for another one while the team walked on its order; by then it was
+		// 500 m out, with no spot within reach, and walked the 2.1 km - 5 of 17 long trips on foot in the overnight runs.
+		// The base has dozens of spots: look again on the retry cadence (10 s), as a reserved pad already does.
+		int nextProbeAtMs = nowMs + ZcrSiteRelookMs();
 		requestState.EnterWaitingForSite(nowMs, nextProbeAtMs, reason);
 		ReportRequestWaiting(trip, requestState, reason, nextProbeAtMs);
 		return AICF_TripOutcome.Retry(
@@ -1809,6 +1815,20 @@ class AICF_VehicleAcquisitionFlow
 			"ENTER_WAITING_FOR_SITE:" + reason,
 			BuildCausationId(trip, requestState, "ENTER_WAIT"),
 			nextProbeAtMs);
+	}
+
+	// ZCR (1 Nov, note 484): how soon a team waiting for a vehicle spot looks again - the retry cadence (10 s);
+	// -aicfSiteRelookMs N (0: AI Conflict's 60-s probe, as before).
+	protected int ZcrSiteRelookMs()
+	{
+		string value;
+		if (System.GetCLIParam("aicfSiteRelookMs", value) && !value.IsEmpty())
+		{
+			if (value.ToInt() <= 0)
+				return m_Config.GetWaitProbeIntervalMs();
+			return value.ToInt();
+		}
+		return m_Config.GetRetryIntervalMs();
 	}
 
 	// The ZCR cap on the spawn distance above: infantry within -aicfRideFromBaseMeters + 50 (0: AI Conflict's own).

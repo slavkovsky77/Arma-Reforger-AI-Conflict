@@ -949,7 +949,9 @@ class AICF_VehicleCoordinator
 		string value;
 		if (System.GetCLIParam("aicfRideSpacingMs", value) && !value.IsEmpty())
 			return Math.Max(0, value.ToInt());
-		return 8000;
+		// Off by default (1 Nov, note 482-484): 4 Farm battles with it v 5 without - rides delivered 30% v 41%, failed at
+		// the HQ 18% v 7%; teams queued at the HQ and walked.
+		return 0;
 	}
 
 	// A ride of this side started within the spacing (game time) by a team within -aicfRideFromBaseMeters (at least 150 m).
