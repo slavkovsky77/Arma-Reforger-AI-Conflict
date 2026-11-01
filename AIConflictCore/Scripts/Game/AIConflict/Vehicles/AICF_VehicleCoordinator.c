@@ -900,6 +900,11 @@ class AICF_VehicleCoordinator
 		int ms = ZcrRideCooldownMs();
 		if (ms <= 0)
 			return;
+		// ZCR (1 Nov, note 485): a ride that delivered its team but whose drop-off ran out of time (one soldier slow to get
+		// out) is no request-fail loop - 6 of 8 failed rides in the watched transport run, and each team then walked its
+		// next trip (1.2-2.1 km; 5 of the run's 7 long trips on foot). No cooldown for it; -aicfDropoffCooldown as before.
+		if (why == "DISEMBARK_TIMEOUT" && !System.IsCLIParam("aicfDropoffCooldown"))
+			return;
 		m_mZcrRideCooldownUntil.Set(faction + ":" + slotId, System.GetTickCount() + ms);
 		Print(string.Format("[ZCR][RIDE] faction=%1 slot=%2 failed=%3 walks_ms=%4", faction, slotId, why, ms), LogLevel.NORMAL);
 	}
