@@ -154,6 +154,28 @@ class AICF_ZcrAttackPlan
 		return System.IsCLIParam("zcrLivePlan");
 	}
 
+	// The live planner's drone order for a side (2 Nov night, note 515 - Martin: "maybe even the LLM commander should decide
+	// when to use drones"): operator teams wanted (0: none given - the drone rule decides) and the base node to send them at
+	// (-1: none). ZCR_Strategist hands them to the drone plan (ZCR_Drones.SetTeamsWanted, the plan's drone targets).
+	protected static ref map<string, int> s_mLiveDroneTeams = new map<string, int>();
+	protected static ref map<string, int> s_mLiveDroneTarget = new map<string, int>();
+
+	static int LiveDroneTeams(string faction)
+	{
+		if (!LiveOn() || faction.IsEmpty())
+			return 0;
+		LoadLive();
+		return s_mLiveDroneTeams.Get(faction);
+	}
+
+	static int LiveDroneTarget(string faction)
+	{
+		int target = -1;
+		if (!s_mLiveDroneTarget.Find(faction, target))
+			return -1;
+		return target;
+	}
+
 	protected static void LoadLive()
 	{
 		float now = GetGame().GetWorld().GetWorldTime();
@@ -177,6 +199,8 @@ class AICF_ZcrAttackPlan
 		}
 		int version = head[1].ToInt();
 		map<string, ref AICF_ZcrPlan> plans = new map<string, ref AICF_ZcrPlan>();
+		map<string, int> droneTeams = new map<string, int>();
+		map<string, int> droneTarget = new map<string, int>();
 		AICF_ZcrPlanLane lane;
 		bool complete;
 		while (f.ReadLine(line) >= 0)
@@ -190,6 +214,14 @@ class AICF_ZcrAttackPlan
 			{
 				complete = true;
 				break;
+			}
+			// "drones <faction> <teams> <target node, -1 none>": the live planner's drone order (ZCR_Strategist applies it).
+			if (v[0] == "drones" && v.Count() >= 4)
+			{
+				droneTeams.Set(v[1], v[2].ToInt());
+				droneTarget.Set(v[1], v[3].ToInt());
+				lane = null;
+				continue;
 			}
 			if (v[0] == "team" && v.Count() >= 12)
 			{
@@ -214,6 +246,8 @@ class AICF_ZcrAttackPlan
 		if (!complete)
 			return;
 		s_mLive = plans;
+		s_mLiveDroneTeams = droneTeams;
+		s_mLiveDroneTarget = droneTarget;
 		s_iLiveVersion = version;
 		Print(string.Format("[ZCR][LIVEPLAN] t=%1 event=loaded version=%2 teams=%3", Math.Round(now / 1000), version, plans.Count()), LogLevel.NORMAL);
 	}
