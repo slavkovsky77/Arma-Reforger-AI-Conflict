@@ -502,6 +502,12 @@ class AICF_MatchController
 		return s_ActiveController;
 	}
 
+	// ZCR (2 Nov, note 493): read access for the watch camera's caption (AICF_VehicleCoordinator.ZcrRideStep).
+	AICF_VehicleCoordinator ZcrVehicles()
+	{
+		return m_VehicleCoordinator;
+	}
+
 	// Только чтение актуального владельца; policy не кеширует slot/group identity.
 	AICF_GroupSlot FindManagedInfantrySlot(SCR_AIGroup group)
 	{

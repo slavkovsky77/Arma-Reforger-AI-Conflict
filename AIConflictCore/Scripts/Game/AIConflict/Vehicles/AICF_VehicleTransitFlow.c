@@ -392,6 +392,35 @@ class AICF_VehicleTransitFlow
 		return true;
 	}
 
+	// ZCR (2 Nov, note 498): which member broke the cohesion - A0's ride failed at the HQ with all four aboard at boarding.
+	// [ZCR][COHESION] faction= op= member= m= max_m= in= (in: the vehicle he is in, none) x= z=
+	protected static void ZcrLogCohesion(AICF_TransportTrip trip, IEntity vehicle, float maximumMeters)
+	{
+		if (!trip || !vehicle || !trip.GetAssignment() || !trip.GetAssignment().GetGroup())
+			return;
+		array<AIAgent> agents = {};
+		trip.GetAssignment().GetGroup().GetAgents(agents);
+		foreach (AIAgent agent : agents)
+		{
+			if (!agent)
+				continue;
+			IEntity man = agent.GetControlledEntity();
+			if (!AICF_GroupRuntime.IsAliveCharacter(man) || CompartmentAccessComponent.GetVehicleIn(man) == vehicle)
+				continue;
+			float m = vector.DistanceXZ(man.GetOrigin(), vehicle.GetOrigin());
+			if (m <= maximumMeters)
+				continue;
+			string inside = "none";
+			IEntity other = CompartmentAccessComponent.GetVehicleIn(man);
+			if (other)
+				inside = other.GetPrefabData().GetPrefabName();
+			Print(string.Format("[ZCR][COHESION] faction=%1 op=%2 member=%3 m=%4 max_m=%5 in=%6 x=%7 z=%8", trip.GetFactionKey(),
+				trip.GetOperationId(), man.GetPrefabData().GetPrefabName(), Math.Round(m), Math.Round(maximumMeters), inside,
+				Math.Round(man.GetOrigin()[0]), Math.Round(man.GetOrigin()[2])) +
+				string.Format(" vx=%1 vz=%2", Math.Round(vehicle.GetOrigin()[0]), Math.Round(vehicle.GetOrigin()[2])), LogLevel.NORMAL);
+		}
+	}
+
 	AICF_TripOutcome Tick(AICF_TransportTrip trip, string causationId)
 	{
 		string invalidReason;
@@ -448,6 +477,7 @@ class AICF_VehicleTransitFlow
 			vehicle,
 			m_Config.GetCohesionDistanceMeters()))
 		{
+			ZcrLogCohesion(trip, vehicle, m_Config.GetCohesionDistanceMeters());
 			return AICF_TripOutcome.FallbackToFoot("GROUP_COHESION_EXCEEDED", causationId);
 		}
 

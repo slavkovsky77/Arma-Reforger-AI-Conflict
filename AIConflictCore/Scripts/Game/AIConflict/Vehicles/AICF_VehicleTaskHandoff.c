@@ -5,6 +5,7 @@ class AICF_VehicleTaskHandoff
 	protected ref AICF_OrderPlanner m_OrderPlanner;
 	protected ref AICF_ObjectiveGraph m_ObjectiveGraph;
 	protected ref AICF_TargetSelector m_TargetSelector;
+	protected static ref map<string, int> s_mZcrRestoreLogAt = new map<string, int>();
 
 	void AICF_VehicleTaskHandoff(
 		AICF_OrderPlanner orderPlanner,
@@ -316,7 +317,19 @@ class AICF_VehicleTaskHandoff
 
 		string failureReason = "NONE";
 		if (!plannerAccepted)
+		{
 			failureReason = "PLANNER_REJECTED";
+			// ZCR (2 Nov, note 501): which guard refuses, every 30 s a team. [ZCR][RESTORE] faction= slot= why= alive= reason=
+			string zcrKey = trip.GetFactionKey() + ":" + slot.GetSlotId();
+			int zcrNow = System.GetTickCount();
+			if (!s_mZcrRestoreLogAt.Contains(zcrKey) || zcrNow - s_mZcrRestoreLogAt.Get(zcrKey) >= 30000)
+			{
+				s_mZcrRestoreLogAt.Set(zcrKey, zcrNow);
+				Print(string.Format("[ZCR][RESTORE] faction=%1 slot=%2 why=%3 alive=%4 reason=%5 attempts=%6", trip.GetFactionKey(),
+					slot.GetSlotKey(), m_OrderPlanner.ZcrRebuildBlocker(slot, faction), alive, reason,
+					handoffState.GetRestoreAttempts()), LogLevel.NORMAL);
+			}
+		}
 		else if (!restored)
 			failureReason = "WAYPOINT_BIND_MISMATCH";
 		ReportOrderRestoreResult(

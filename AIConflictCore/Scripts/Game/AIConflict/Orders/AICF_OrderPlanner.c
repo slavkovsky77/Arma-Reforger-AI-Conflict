@@ -2564,6 +2564,26 @@ class AICF_OrderPlanner
 		return IsAssignmentTargetValid(slot, faction, target, slot.GetStrategicIntentPosture(), slot.GetStrategicIntentAuthority());
 	}
 
+	// ZCR (2 Nov, note 501): why RebuildCurrentOrder refuses - teams stood 9-25 min with no order after a failed ride while
+	// the vehicle flow's order restore was rejected every second (PLANNER_REJECTED). The first guard that fails, or "".
+	string ZcrRebuildBlocker(AICF_GroupSlot slot, SCR_CampaignFaction faction)
+	{
+		if (!slot)
+			return "NO_SLOT";
+		if (slot.GetRouteRecoveryEpisode().IsBlocked(slot))
+			return "ROUTE_RECOVERY_BLOCKED";
+		if (slot.IsPersistentStuckFieldHold())
+			return "PERSISTENT_STUCK_FIELD_HOLD";
+		if (slot.IsTemporaryRouteReplanHold())
+			return "TEMPORARY_ROUTE_REPLAN_HOLD";
+		if (!slot.IsCombatReady())
+			return "NOT_COMBAT_READY";
+		if (!IsCurrentTargetValid(slot, faction))
+			return "TARGET_INVALID:" + AICF_Stage1Diagnostics.BaseKey(slot.GetTargetBase()) + ":" + slot.GetOperationalPosture() +
+				":system_hold=" + slot.IsSystemHoldOrder();
+		return "";
+	}
+
 	protected bool IsCurrentTargetValid(
 		AICF_GroupSlot slot,
 		SCR_CampaignFaction faction)

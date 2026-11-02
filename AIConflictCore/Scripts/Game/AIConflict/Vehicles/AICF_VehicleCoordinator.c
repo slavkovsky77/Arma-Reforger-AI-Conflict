@@ -1064,6 +1064,23 @@ class AICF_VehicleCoordinator
 		return m_mZcrRideCooldownUntil.Find(faction + ":" + slotId, until) && System.GetTickCount() < until;
 	}
 
+	// ZCR (2 Nov, note 493): the watch camera's caption - what the team is doing now, not only its order.
+	// "" (no ride), a trip phase (WAITING_FOR_SITE, BOARDING, TRANSIT...) or "COOLDOWN" (its ride failed; walking).
+	static string ZcrRideStep(AICF_GroupSlot slot)
+	{
+		AICF_MatchController controller = AICF_MatchController.GetActiveController();
+		if (!slot || !controller || !controller.ZcrVehicles())
+			return "";
+		AICF_VehicleCoordinator self = controller.ZcrVehicles();
+		AICF_VehicleSlotView view = self.GetSlotView(slot);
+		if (view && view.GetPhase() != "NONE" && !view.GetPhase().IsEmpty())
+			return view.GetPhase();
+		if (slot.GetGroup() && slot.GetGroup().GetFaction() &&
+			self.ZcrRideCooling(slot.GetGroup().GetFaction().GetFactionKey(), slot.GetSlotId()))
+			return "COOLDOWN";
+		return "";
+	}
+
 	protected AICF_EVehicleAcceptanceFailureDomain ResolveTerminalFailureDomain(
 		AICF_ETransportTripPhase previousPhase,
 		AICF_TripOutcome terminalOutcome)
