@@ -193,6 +193,13 @@ class AICF_ConstructionSiteSearch
 			order.m_fYaw = roadYaw;
 			searchCenter = roadSpot;
 		}
+		// ZCR (2 Nov): a fortification tries its base's planned spots and facings first (AICF_ZcrFortPlan, lab/fortplan.py;
+		// Seed sets the candidate index, -1000 - 10 x spot - variant, which the placement log reads).
+		else if (AICF_ZcrFortPlan.Seed(order, roadSpot, roadYaw))
+		{
+			order.m_fYaw = roadYaw;
+			searchCenter = roadSpot;
+		}
 		else
 		{
 			attempt = order.m_iSearchOffset + order.m_iAttempts++;

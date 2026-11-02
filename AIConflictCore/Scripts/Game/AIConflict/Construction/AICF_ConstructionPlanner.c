@@ -641,6 +641,8 @@ class AICF_ConstructionPlanner
 		}
 		else
 		{
+			// ZCR (2 Nov): where each fortification went, from the plan or today's search, and how it faces the threat.
+			AICF_ZcrFortPlan.Placed(order);
 			order.m_aPendingCandidates.Clear();
 			order.m_Path = null;
 			order.m_Navigation = null;
