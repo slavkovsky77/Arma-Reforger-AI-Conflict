@@ -3923,7 +3923,8 @@ class AICF_MatchController
 			return false;
 
 		threatMeasure = utility.GetThreatMeasure();
-		return threatMeasure <= MOB_EGRESS_MAX_THREAT_MEASURE;
+		// ZCR (2 Nov, note 502): the same limit as the vehicle recoveries (AICF_VehicleWatchdog.ZcrMaxRecoveryThreat).
+		return threatMeasure <= Math.Max(MOB_EGRESS_MAX_THREAT_MEASURE, AICF_VehicleWatchdog.ZcrMaxRecoveryThreat());
 	}
 
 	protected bool IsMobEgressSafetyRejection(string reason)

@@ -743,7 +743,19 @@ class AICF_VehicleWatchdog
 		if (!utility)
 			return false;
 		threatMeasure = utility.GetThreatMeasure();
-		return threatMeasure <= HIDDEN_RECOVERY_MAX_THREAT_MEASURE;
+		return threatMeasure <= ZcrMaxRecoveryThreat();
+	}
+
+	// ZCR (2 Nov, note 502): 0.01 was never met - in the transport test, with no enemy on the map, teams read 0.075-0.3
+	// (the game's threat measure, likely from nearby engines), so the seat fallback, the clean-up after a failed ride and
+	// other recoveries waited for ever: a last soldier's seat deferred until the whole ride was lost, a team with no
+	// order for 20 min. -aicfRecoveryMaxThreat N (0.01: as before).
+	static float ZcrMaxRecoveryThreat()
+	{
+		string value;
+		if (System.GetCLIParam("aicfRecoveryMaxThreat", value) && !value.IsEmpty())
+			return value.ToFloat();
+		return 0.35;
 	}
 
 	protected bool IsHiddenRecoveryPointVisible(IEntity observer, vector target)

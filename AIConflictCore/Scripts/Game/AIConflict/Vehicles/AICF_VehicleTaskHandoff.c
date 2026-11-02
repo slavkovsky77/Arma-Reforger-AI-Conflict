@@ -297,6 +297,16 @@ class AICF_VehicleTaskHandoff
 				reason,
 				restoreTarget);
 		}
+		// ZCR (2 Nov, note 502): the rebuilt order wanted a false-completion route leg from where the team stood and no leg
+		// was found (FALSE_COMPLETION_ROUTE_ENDPOINT_UNAVAILABLE) - the restore was rejected every second and the team
+		// stood with no order for 20-25 min. Forget the leg and give the order for the base itself. -aicfNoLegReset off.
+		if (!plannerAccepted && slot.GetFalseCompletionEndpointRevision() > 0 && !System.IsCLIParam("aicfNoLegReset"))
+		{
+			slot.ResetFalseCompletionRecovery();
+			plannerAccepted = m_OrderPlanner.RebuildCurrentOrder(slot, faction, reason);
+			Print(string.Format("[ZCR][RESTORE] faction=%1 slot=%2 leg_reset=1 accepted=%3", trip.GetFactionKey(), slot.GetSlotKey(),
+				plannerAccepted), LogLevel.NORMAL);
+		}
 
 		AIWaypoint newWaypoint = slot.GetWaypoint();
 		array<AIWaypoint> waypointQueue = {};
