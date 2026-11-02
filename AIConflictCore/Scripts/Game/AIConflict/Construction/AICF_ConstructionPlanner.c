@@ -279,6 +279,9 @@ class AICF_ConstructionPlanner
 		m_iTotalCpuMs += updateMs;
 		m_iMaxUpdateMs = Math.Max(m_iMaxUpdateMs, updateMs);
 		m_iUpdates++;
+		// ZCR (2 Nov): each update long enough to be felt as a hitch, with the depot way-out work in it.
+		if (updateMs >= 30)
+			AICF_Stage1Diagnostics.Info("CONSTRUCTION_SLOW_UPDATE", string.Format("ms=%1 %2", updateMs, AICF_DepotAccess.FrameReport()));
 	}
 
 	protected void InitializeBases(int now)

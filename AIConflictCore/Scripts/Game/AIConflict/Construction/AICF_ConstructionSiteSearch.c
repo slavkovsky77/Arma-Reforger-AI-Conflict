@@ -1094,7 +1094,15 @@ class AICF_ConstructionSiteSearch
 			vector road;
 			string blocker;
 			int cells, sweeps;
-			if (AICF_DepotAccess.WayOut(center, AICF_DepotAccess.REACH_M, road, blocker, cells, sweeps) == 0)
+			// ZCR (2 Nov): the check runs a few ms a frame (it took up to ~250 ms in one); until it has an answer the
+			// candidate waits, as for the query budget (Step and the commit retry on QUERY_BUDGET).
+			int way = AICF_DepotAccess.WayOutSliced(center, AICF_DepotAccess.REACH_M, road, blocker, cells, sweeps);
+			if (way == AICF_DepotAccess.PENDING)
+			{
+				order.m_sReason = "QUERY_BUDGET";
+				return false;
+			}
+			if (way == 0)
 			{
 				order.m_sReason = "DEPOT_NO_ROAD_ACCESS";
 				order.m_sObstacle = blocker;
