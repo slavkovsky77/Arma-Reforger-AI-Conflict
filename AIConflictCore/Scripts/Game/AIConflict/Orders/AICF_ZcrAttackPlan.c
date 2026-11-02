@@ -23,6 +23,11 @@ class AICF_ZcrPlan
 	string m_sId;
 	int m_iIndex;
 	ref array<ref AICF_ZcrPlanLane> m_aLanes = {};
+	// ZCR, 2 Nov night: one team's live plan (lab/liveplan.py, -zcrLivePlan - see AICF_ZcrAttackPlan.LoadLive)
+	bool m_bLive;
+	bool m_bGo;            // go in; else wait at the lane's hold point
+	int m_iHoldS;          // ... at most this long, then go anyway
+	string m_sKey;         // "live|<faction>|<slot>"
 }
 
 class AICF_ZcrAttackPlan
@@ -115,12 +120,164 @@ class AICF_ZcrAttackPlan
 	protected static ref map<string, float> s_mFirstHoldAt = new map<string, float>();
 	protected static ref map<string, bool> s_mGo = new map<string, bool>();
 
-	// The hold line's key: the side and the plan (in the normal matches several plans run at once).
+	// The hold line's key: the side and the plan (in the normal matches several plans run at once); a live plan: its team.
 	static string HoldKey(string faction, AICF_ZcrPlan plan)
 	{
 		if (!plan)
 			return faction;
+		if (plan.m_bLive)
+			return plan.m_sKey;
 		return faction + "|" + plan.m_iIndex;
+	}
+
+	// ZCR, 2 Nov night (note 515 - Martin: "attack routes should be planned based on the context (positions of soldiers,
+	// cover)", "points where soldiers are dropped should be planned by LLM", "only one side can use it, the other one will
+	// not, and we will compare"): live plans per team, rewritten while the battle runs by lab/liveplan.py - a threat map
+	// from the enemies that side knows, candidate drop points and cover-to-cover routes, and the code's or Gemini's pick -
+	// in $profile:zcr/liveplan.txt (-zcrLivePlan), read again when its version changes (looked at every LIVE_CHECK_MS):
+	//   version <n>
+	//   team <faction> <slot> <objective_x> <objective_z> <drop_x> <drop_z> <go> <hold_x> <hold_z> <hold_s> <route_id> <count>
+	//   <count> lines "x z": the route from the drop point (or from where the team stands) into the objective
+	//   end
+	// A team with a live entry takes it instead of the static plan, not latched: each new leg and ride reads the latest.
+	// drop 0 0: no drop point (the team is on foot). go 0: along the route to its hold point, wait there until go 1 or
+	// hold_s seconds. A file without "end" (half written) is read again at the next look.
+	static const float LIVE_CHECK_MS = 5000;
+	protected static int s_iLiveVersion = -1;
+	protected static float s_fLiveCheckedAt = -1e9;
+	protected static ref map<string, ref AICF_ZcrPlan> s_mLive = new map<string, ref AICF_ZcrPlan>();
+	protected static ref map<string, float> s_mLiveHoldAt = new map<string, float>();   // key@hold -> world ms the team got there
+	protected static ref map<string, string> s_mLiveSeen = new map<string, string>();   // faction|slot -> route|go|drop last logged
+
+	static bool LiveOn()
+	{
+		return System.IsCLIParam("zcrLivePlan");
+	}
+
+	protected static void LoadLive()
+	{
+		float now = GetGame().GetWorld().GetWorldTime();
+		if (now - s_fLiveCheckedAt < LIVE_CHECK_MS)
+			return;
+		s_fLiveCheckedAt = now;
+		FileHandle f = FileIO.OpenFile("$profile:zcr/liveplan.txt", FileMode.READ);
+		if (!f)
+			return;
+		string line;
+		array<string> head = {};
+		if (f.ReadLine(line) >= 0)
+		{
+			line.TrimInPlace();
+			line.Split(" ", head, true);
+		}
+		if (head.Count() < 2 || head[0] != "version" || head[1].ToInt() == s_iLiveVersion)
+		{
+			f.Close();
+			return;
+		}
+		int version = head[1].ToInt();
+		map<string, ref AICF_ZcrPlan> plans = new map<string, ref AICF_ZcrPlan>();
+		AICF_ZcrPlanLane lane;
+		bool complete;
+		while (f.ReadLine(line) >= 0)
+		{
+			line.TrimInPlace();
+			if (line.IsEmpty())
+				continue;
+			array<string> v = {};
+			line.Split(" ", v, true);
+			if (v[0] == "end")
+			{
+				complete = true;
+				break;
+			}
+			if (v[0] == "team" && v.Count() >= 12)
+			{
+				AICF_ZcrPlan plan = new AICF_ZcrPlan();
+				plan.m_bLive = true;
+				plan.m_vObjective = Vector(v[3].ToFloat(), 0, v[4].ToFloat());
+				plan.m_vAssembly = Vector(v[5].ToFloat(), 0, v[6].ToFloat());
+				plan.m_bGo = v[7].ToInt() != 0;
+				plan.m_iHoldS = v[10].ToInt();
+				plan.m_sId = v[11];
+				plan.m_iIndex = -1;
+				plan.m_sKey = "live|" + v[1] + "|" + v[2];
+				lane = new AICF_ZcrPlanLane();
+				lane.m_vHold = Vector(v[8].ToFloat(), 0, v[9].ToFloat());
+				plan.m_aLanes.Insert(lane);
+				plans.Set(v[1] + "|" + v[2], plan);
+			}
+			else if (lane && v.Count() >= 2)
+				lane.m_aPoints.Insert(Vector(v[0].ToFloat(), 0, v[1].ToFloat()));
+		}
+		f.Close();
+		if (!complete)
+			return;
+		s_mLive = plans;
+		s_iLiveVersion = version;
+		Print(string.Format("[ZCR][LIVEPLAN] t=%1 event=loaded version=%2 teams=%3", Math.Round(now / 1000), version, plans.Count()), LogLevel.NORMAL);
+	}
+
+	// A team's live plan for this objective (within OBJECTIVE_M; objective zero: any), else null. Logs each change of its
+	// route, go or drop point: [ZCR][LIVEPLAN] event=team.
+	static AICF_ZcrPlan Live(string faction, int slot, vector objective)
+	{
+		if (!LiveOn() || faction.IsEmpty())
+			return null;
+		LoadLive();
+		string key = faction + "|" + slot.ToString();
+		AICF_ZcrPlan plan;
+		if (!s_mLive.Find(key, plan) || !plan || plan.m_aLanes.IsEmpty() || plan.m_aLanes[0].m_aPoints.Count() < 2)
+			return null;
+		if (objective != vector.Zero && vector.DistanceXZ(plan.m_vObjective, objective) > OBJECTIVE_M)
+			return null;
+		string seen = string.Format("%1|%2|%3_%4", plan.m_sId, plan.m_bGo, Math.Round(plan.m_vAssembly[0]), Math.Round(plan.m_vAssembly[2]));
+		if (s_mLiveSeen.Get(key) != seen)
+		{
+			s_mLiveSeen.Set(key, seen);
+			Print(string.Format("[ZCR][LIVEPLAN] t=%1 event=team side=%2 slot=%3 route=%4 go=%5 drop=%6,%7 hold=%8,%9", Math.Round(GetGame().GetWorld().GetWorldTime() / 1000),
+				faction, slot, plan.m_sId, plan.m_bGo, Math.Round(plan.m_vAssembly[0]), Math.Round(plan.m_vAssembly[2]), Math.Round(plan.m_aLanes[0].m_vHold[0]),
+				Math.Round(plan.m_aLanes[0].m_vHold[2])), LogLevel.NORMAL);
+		}
+		return plan;
+	}
+
+	protected static string LiveHoldKey(AICF_ZcrPlan plan)
+	{
+		vector h = plan.m_aLanes[0].m_vHold;
+		return string.Format("%1@%2_%3", plan.m_sKey, Math.Round(h[0] / 10), Math.Round(h[2] / 10));
+	}
+
+	// The team is at its live plan's hold point (the wait starts the first time, per hold point).
+	static void LiveAtHold(AICF_ZcrPlan plan, int slot)
+	{
+		string key = LiveHoldKey(plan);
+		if (s_mLiveHoldAt.Contains(key))
+			return;
+		float now = GetGame().GetWorld().GetWorldTime();
+		s_mLiveHoldAt.Set(key, now);
+		Print(string.Format("[ZCR][HOLD] t=%1 side=%2 slot=%3 event=hold holding=1 waited_s=0 live=1 hold_s=%4", Math.Round(now / 1000), plan.m_sKey, slot, plan.m_iHoldS), LogLevel.NORMAL);
+	}
+
+	// Go for a live plan: its go flag, or its hold_s ran out at its hold point; no live entry any more - go.
+	static bool LiveGo(AICF_ZcrPlan plan)
+	{
+		if (!plan || plan.m_bGo)
+			return true;
+		float at;
+		if (!s_mLiveHoldAt.Find(LiveHoldKey(plan), at))
+			return false;
+		return GetGame().GetWorld().GetWorldTime() - at >= plan.m_iHoldS * 1000;
+	}
+
+	// The same by the hold key (AICF_InfantryApproachRoute.CanResumeTileWait while holding): the latest entry of that team.
+	protected static bool LiveGoKey(string key)
+	{
+		LoadLive();
+		AICF_ZcrPlan plan;
+		if (!s_mLive.Find(key.Substring(5, key.Length() - 5), plan) || !plan)
+			return true;
+		return LiveGo(plan);
 	}
 
 	static void AtHold(string key, int slot)
@@ -143,6 +300,8 @@ class AICF_ZcrAttackPlan
 
 	static bool Go(string key)
 	{
+		if (key.IndexOf("live|") == 0)
+			return LiveGoKey(key);
 		if (System.IsCLIParam("zcrNoAttackHold") || s_mGo.Get(key))
 			return true;
 		array<int> holding = s_mHolding.Get(key);
@@ -208,6 +367,10 @@ class AICF_ZcrAttackPlan
 	// approach legs ask at different moments and places. from = zero: where the team is not known - the main base.
 	static AICF_ZcrPlan ForTeam(string faction, int slot, vector objective, vector from)
 	{
+		// A live plan (lab/liveplan.py, -zcrLivePlan) first - not latched; else the static plan as before.
+		AICF_ZcrPlan live = Live(faction, slot, objective);
+		if (live)
+			return live;
 		if (!On() || faction.IsEmpty() || objective == vector.Zero)
 			return null;
 		Load();

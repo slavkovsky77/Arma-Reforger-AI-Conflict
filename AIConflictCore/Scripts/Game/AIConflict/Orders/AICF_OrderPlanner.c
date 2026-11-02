@@ -2644,6 +2644,12 @@ class AICF_OrderPlanner
 		if (!isRelay && role == AICF_EGroupRole.ATTACK && slot.GetUnitType() == AICF_EGroupUnitType.INFANTRY)
 		{
 			AICF_InfantryApproachRoute route = slot.GetApproachRoute(target);
+			// ZCR, 2 Nov night (note 515): a team with a live plan (lab/liveplan.py, -zcrLivePlan) keeps to its route after a
+			// ride or a false completion too - with a false-completion endpoint (endpointRevision > 0) the route was disabled
+			// and the team sent straight at the objective: 3 of 4 Soviet teams out of their rides in the first live battle.
+			if (route && endpointRevision > 0 && group && group.GetFaction() &&
+				AICF_ZcrAttackPlan.Live(group.GetFaction().GetFactionKey(), slot.GetSlotId(), targetPosition))
+				endpointRevision = 0;
 			if (route && endpointRevision > 0)
 				route.Disable();
 			if (route && endpointRevision == 0)

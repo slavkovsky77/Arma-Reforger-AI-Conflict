@@ -11,6 +11,7 @@ class AICF_InfantryApproachRoute
 	protected int m_iLastCover = -1;   // ZCR: the cover score of the last leg's end point (cover= on INFANTRY_APPROACH_ASSIGNED)
 	protected bool m_bZcrHolding;      // ZCR: waiting at the attack plan's hold line (AICF_ZcrAttackPlan)
 	protected string m_sZcrHoldKey;    // ZCR: ... of that plan (several plans run at once in the normal matches)
+	protected bool m_bZcrLive;         // ZCR: the last leg came from a live plan (lab/liveplan.py)
 
 	int GetLastCover()
 	{
@@ -46,9 +47,13 @@ class AICF_InfantryApproachRoute
 		return target && target == m_Target && target.GetOwner() && target.GetOwner().GetID() == m_TargetId;
 	}
 
+	protected float m_fZcrDisabledAt;  // ZCR: world ms of the last Disable (a live plan's team gets its route back, BuildCandidate)
+
 	void Disable()
 	{
 		m_bDisabled = true;
+		if (GetGame().GetWorld())
+			m_fZcrDisabledAt = GetGame().GetWorld().GetWorldTime();
 	}
 
 	bool IsWaitingForTile()
@@ -69,9 +74,21 @@ class AICF_InfantryApproachRoute
 	bool BuildCandidate(vector leaderPosition, vector objective, int numericSlot, out vector candidate)
 	{
 		candidate = objective;
+		m_bZcrLive = false;
 		// ZCR, 29 Oct: the team's attack plan read from the map (AICF_ZcrAttackPlan, lab/attackplan.py) - its lanes; the plan
 		// from the origin nearest where this approach started.
 		AICF_ZcrPlan plan = AICF_ZcrAttackPlan.ForTeam(m_sSide, numericSlot, objective, m_vOrigin);
+		// ZCR, 2 Nov night (note 515): a live plan's team gets its route back 20 s after it was disabled (a stuck-route
+		// recovery leg, a navmesh miss) - one stuck leg sent the team straight at the objective for the rest of the attack
+		// (8 of ~20 attack legs a side in the first live battle came after a stuck-route rebuild).
+		if (m_bDisabled && plan && plan.m_bLive && numericSlot >= 0 && GetGame().GetWorld() &&
+			GetGame().GetWorld().GetWorldTime() - m_fZcrDisabledAt >= 20000)
+		{
+			m_bDisabled = false;
+			m_iTileWaitStartedAtMs = 0;
+		}
+		if (plan && plan.m_bLive && !m_bDisabled && numericSlot >= 0)
+			return LiveCandidate(plan, leaderPosition, objective, numericSlot, candidate);
 		if (plan && !m_bDisabled && numericSlot >= 0)
 			return PlanCandidate(plan, leaderPosition, objective, numericSlot, candidate);
 		if (m_bDisabled || numericSlot < 0 || vector.DistanceXZ(leaderPosition, objective) <= 250.0)
@@ -162,6 +179,102 @@ class AICF_InfantryApproachRoute
 			{
 				if (j == n - 1 && toObjective <= 80)
 					return false;
+				candidate = lane.m_aPoints[j];
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// ZCR, 2 Nov night (note 515): the next leg on the team's live route (lab/liveplan.py: from its drop point or from where
+	// it stood, cover to cover past the enemies its side knows). Live routes may go sideways (a flank), so a leg need not
+	// end nearer the objective - TryResolve lets live legs through. Wait (go 0): along the route to its hold point - or
+	// straight to it when off the route or past it - and hold there (a timed Defend leg, as the hold line). Go: off the route
+	// and farther out than its start - to the start; off it and nearer - to its nearest point nearer the objective than the
+	// team; on it - the first point 120 m+ along; at the route's end (within 30 m) - straight in (false).
+	protected bool LiveCandidate(AICF_ZcrPlan plan, vector leader, vector objective, int numericSlot, out vector candidate)
+	{
+		candidate = objective;
+		m_bZcrHolding = false;
+		m_bZcrLive = true;
+		AICF_ZcrPlanLane lane = plan.m_aLanes[0];
+		int n = lane.m_aPoints.Count();
+		m_sZcrHoldKey = AICF_ZcrAttackPlan.HoldKey(m_sSide, plan);
+		bool go = AICF_ZcrAttackPlan.LiveGo(plan);
+		float toObjective = vector.DistanceXZ(leader, objective);
+		int nearest;
+		int holdIndex;
+		float nearestM = 1e9;
+		float holdM = 1e9;
+		for (int i; i < n; i++)
+		{
+			float d = vector.DistanceXZ(lane.m_aPoints[i], leader);
+			if (d < nearestM)
+			{
+				nearestM = d;
+				nearest = i;
+			}
+			float h = vector.DistanceXZ(lane.m_aPoints[i], lane.m_vHold);
+			if (h < holdM)
+			{
+				holdM = h;
+				holdIndex = i;
+			}
+		}
+		if (!go)
+		{
+			// 50 m, not the hold line's 35: a live hold point may sit up to 25 m off the navmesh (TryResolve).
+			if (vector.DistanceXZ(leader, lane.m_vHold) <= 50)
+			{
+				AICF_ZcrAttackPlan.LiveAtHold(plan, numericSlot);
+				m_bZcrHolding = true;
+				candidate = lane.m_vHold;
+				return true;
+			}
+			candidate = lane.m_vHold;
+			if (nearestM > 150 || nearest >= holdIndex)
+				return true;
+			float alongHold;
+			for (int k = nearest + 1; k < holdIndex; k++)
+			{
+				alongHold += vector.DistanceXZ(lane.m_aPoints[k - 1], lane.m_aPoints[k]);
+				if (alongHold >= 120)
+				{
+					candidate = lane.m_aPoints[k];
+					return true;
+				}
+			}
+			return true;
+		}
+		if (nearestM > 150)
+		{
+			if (toObjective > vector.DistanceXZ(lane.m_aPoints[0], objective) + 50)
+			{
+				candidate = lane.m_aPoints[0];
+				return true;
+			}
+			int join = -1;
+			float joinM = 1e9;
+			for (int q; q < n; q++)
+			{
+				float dq = vector.DistanceXZ(lane.m_aPoints[q], leader);
+				if (vector.DistanceXZ(lane.m_aPoints[q], objective) + 40 < toObjective && dq < joinM)
+				{
+					joinM = dq;
+					join = q;
+				}
+			}
+			if (join < 0)
+				return false;
+			candidate = lane.m_aPoints[join];
+			return true;
+		}
+		float along;
+		for (int j = nearest + 1; j < n; j++)
+		{
+			along += vector.DistanceXZ(lane.m_aPoints[j - 1], lane.m_aPoints[j]);
+			if (along >= 120 || j == n - 1)
+			{
 				candidate = lane.m_aPoints[j];
 				return true;
 			}
@@ -325,11 +438,15 @@ class AICF_InfantryApproachRoute
 		else
 			m_iTileWaitStartedAtMs = 0;
 		// Проекция не должна схлопывать соседние полосы в одну общую точку.
-		if (!pathfinding.GetClosestPositionOnNavmesh(candidate, "8 5 8", endpoint) ||
-			vector.DistanceSqXZ(candidate, endpoint) > 64.0 ||
-			Math.AbsFloat(endpoint[1] - candidate[1]) > 3.0 ||
+		bool projected = pathfinding.GetClosestPositionOnNavmesh(candidate, "8 5 8", endpoint) &&
+			vector.DistanceSqXZ(candidate, endpoint) <= 64.0 && Math.AbsFloat(endpoint[1] - candidate[1]) <= 3.0;
+		// ZCR, 2 Nov night: a live route's point (lab/liveplan.py, 10 m grid) beside a wall or a hedge - the navmesh within 25 m.
+		if (!projected && m_bZcrLive)
+			projected = pathfinding.GetClosestPositionOnNavmesh(candidate, "25 8 25", endpoint) &&
+				vector.DistanceSqXZ(candidate, endpoint) <= 625.0 && Math.AbsFloat(endpoint[1] - candidate[1]) <= 6.0;
+		if (!projected ||
 			ChimeraWorldUtils.TryGetWaterSurfaceSimple(world, endpoint - "0 0.5 0") ||
-			(!waitingForTile && !m_bZcrHolding && vector.DistanceXZ(endpoint, objective) + 30.0 >= vector.DistanceXZ(leader.GetOrigin(), objective)))
+			(!waitingForTile && !m_bZcrHolding && !m_bZcrLive && vector.DistanceXZ(endpoint, objective) + 30.0 >= vector.DistanceXZ(leader.GetOrigin(), objective)))
 		{
 			Disable();
 			AICF_Stage2Diagnostics.Info("INFANTRY_APPROACH_FALLBACK",
