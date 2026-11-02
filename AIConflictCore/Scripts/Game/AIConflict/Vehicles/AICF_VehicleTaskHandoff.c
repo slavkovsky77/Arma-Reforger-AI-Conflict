@@ -224,7 +224,15 @@ class AICF_VehicleTaskHandoff
 			return true;
 		}
 		if (!handoffState.BeginOrderRestoreRequest())
-			return false;
+		{
+			// ZCR (2 Nov, note 504): budget spent, still no order - one more attempt a minute. -aicfNoRestoreRearm off.
+			if (System.IsCLIParam("aicfNoRestoreRearm") || !handoffState.ZcrRearmRestore(requestedAtMs, 60000) ||
+				!handoffState.BeginOrderRestoreRequest())
+				return false;
+			if (slot)
+				Print(string.Format("[ZCR][RESTORE] faction=%1 slot=%2 rearm=1 pending_s=%3", trip.GetFactionKey(), slot.GetSlotKey(),
+					(requestedAtMs - handoffState.GetStartedAtMs()) / 1000), LogLevel.NORMAL);
+		}
 
 		AIWaypoint oldWaypoint;
 		if (slot)
@@ -306,6 +314,23 @@ class AICF_VehicleTaskHandoff
 			plannerAccepted = m_OrderPlanner.RebuildCurrentOrder(slot, faction, reason);
 			Print(string.Format("[ZCR][RESTORE] faction=%1 slot=%2 leg_reset=1 accepted=%3", trip.GetFactionKey(), slot.GetSlotKey(),
 				plannerAccepted), LogLevel.NORMAL);
+		}
+		// ZCR (2 Nov, note 504): the team's stuck verdict from before the ride (the route recovery exhausted, the field hold)
+		// refused every restore - 10 of 10 rejections in the night's 12 runs, a team then stood 10-26 min. The ride moved
+		// the team; forget the verdict and rebuild. -aicfNoStuckReset off.
+		if (!plannerAccepted && !System.IsCLIParam("aicfNoStuckReset") && (slot.GetRouteRecoveryEpisode().IsBlocked(slot) ||
+			slot.IsPersistentStuckFieldHold() || slot.IsTemporaryRouteReplanHold()))
+		{
+			string zcrWas = m_OrderPlanner.ZcrRebuildBlocker(slot, faction);
+			slot.GetRouteRecoveryEpisode().ZcrClear();
+			if (slot.IsPersistentStuckFieldHold())
+				slot.ResumeFromPersistentStuckFieldHold("ZCR_RIDE_ENDED");
+			slot.ClearTemporaryRouteReplanHold();
+			plannerAccepted = m_OrderPlanner.RebuildCurrentOrder(slot, faction, reason);
+			if (!plannerAccepted && m_ObjectiveGraph && m_TargetSelector)
+				plannerAccepted = m_OrderPlanner.AssignOrder(slot, faction, m_ObjectiveGraph, m_TargetSelector, reason, restoreTarget);
+			Print(string.Format("[ZCR][RESTORE] faction=%1 slot=%2 stuck_reset=%3 accepted=%4", trip.GetFactionKey(), slot.GetSlotKey(),
+				zcrWas, plannerAccepted), LogLevel.NORMAL);
 		}
 
 		AIWaypoint newWaypoint = slot.GetWaypoint();

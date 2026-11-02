@@ -116,6 +116,13 @@ class AICF_RouteRecoveryEpisode
 		return true;
 	}
 
+	// ZCR (2 Nov, note 504): a ride that ended leaves the team somewhere else - the stuck verdict from before it no longer
+	// holds, and while it stood the order restore was rejected for good (AICF_VehicleTaskHandoff).
+	void ZcrClear()
+	{
+		m_bActive = false;
+	}
+
 	int GetAgeMs()
 	{
 		return System.GetTickCount(m_iStartedAtMs);

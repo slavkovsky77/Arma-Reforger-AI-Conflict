@@ -1699,6 +1699,7 @@ class AICF_VehicleHandoffState
 	protected int m_iLastAbandonedAuditAtMs;
 	protected int m_iDurablePollCount;
 	protected int m_iFirstDurablePollAtMs;
+	protected int m_iZcrRearmAtMs;
 	protected AIWaypoint m_RestoredWaypoint;
 
 	void Reset()
@@ -1727,6 +1728,7 @@ class AICF_VehicleHandoffState
 		m_iLastAbandonedAuditAtMs = 0;
 		m_iDurablePollCount = 0;
 		m_iFirstDurablePollAtMs = 0;
+		m_iZcrRearmAtMs = 0;
 		m_RestoredWaypoint = null;
 	}
 
@@ -1798,6 +1800,18 @@ class AICF_VehicleHandoffState
 		m_iDurablePollCount = 0;
 		m_iFirstDurablePollAtMs = 0;
 		m_RestoredWaypoint = null;
+		return true;
+	}
+
+	// ZCR (2 Nov, note 504): with the attempt budget spent and still no order, one more attempt a minute - the trip used to
+	// wait in FALLBACK with the order restore pending for the rest of the match (10-26 min, 9 of 12 runs).
+	bool ZcrRearmRestore(int nowMs, int everyMs)
+	{
+		if (m_iRestoreAttempts < m_iMaximumRestoreAttempts || nowMs - m_iStartedAtMs < everyMs ||
+			(m_iZcrRearmAtMs != 0 && nowMs - m_iZcrRearmAtMs < everyMs))
+			return false;
+		m_iZcrRearmAtMs = nowMs;
+		m_iRestoreAttempts = m_iMaximumRestoreAttempts - 1;
 		return true;
 	}
 
