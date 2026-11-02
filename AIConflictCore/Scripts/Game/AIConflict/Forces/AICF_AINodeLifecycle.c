@@ -105,11 +105,13 @@ modded class SCR_AIToggleMaxLOD
 modded class SCR_AIProcessFailedMovementResult
 {
 	protected bool m_bAICFMoveContextReported;
+	protected bool m_bZcrVehMoveLogged;
 
 	override void OnEnter(AIAgent owner)
 	{
 		super.OnEnter(owner);
 		m_bAICFMoveContextReported = false;
+		m_bZcrVehMoveLogged = false;
 	}
 
 	override ENodeResult EOnTaskSimulate(AIAgent owner, float dt)
@@ -125,6 +127,8 @@ modded class SCR_AIProcessFailedMovementResult
 			bool hasRelated = GetVariableIn(PORT_IS_WAYPOINT_RELATED, related);
 			vector location;
 			GetVariableIn(PORT_MOVE_LOCATION, location);
+			if (AICF_ZcrHeldVehicleMove(result, handler))
+				return ENodeResult.FAIL;
 			if (AICF_FIAGarrisonMovementPolicy.Handle(m_Group, m_GroupUtilityComponent, result, handler, related, location))
 				return ENodeResult.FAIL;
 			if (AICF_FIAPatrolMovementPolicy.Handle(m_Group, m_GroupUtilityComponent, result, handler, related, location))
@@ -152,6 +156,38 @@ modded class SCR_AIProcessFailedMovementResult
 			}
 		}
 		return super.EOnTaskSimulate(owner, dt);
+	}
+
+	// ZCR (2 Nov, note 505): a vehicle held for boarding (no drive to the wheels, ZCR_Traffic) can end its move STUCK, and
+	// the stock rule then makes the whole team get out - the ride fails (CREW_ROLE_LOST_DURING_BOARDING). Every failed
+	// vehicle move is logged once; on a held vehicle the team stays aboard and the move is retried (-zcrNoHeldStay: stock).
+	protected bool AICF_ZcrHeldVehicleMove(int result, int handler)
+	{
+		if (!Replication.IsServer() || handler == AIGroupMovementComponent.DEFAULT_HANDLER_ID || !m_GroupUtilityComponent.m_VehicleMgr)
+			return false;
+		SCR_AIGroupVehicle groupVehicle = m_GroupUtilityComponent.m_VehicleMgr.FindVehicleBySubgroupId(handler);
+		IEntity vehicle;
+		if (groupVehicle)
+			vehicle = groupVehicle.GetEntity();
+		if (!vehicle)
+			return false;
+		float gear = -1;
+		CarControllerComponent car = CarControllerComponent.Cast(vehicle.FindComponent(CarControllerComponent));
+		VehicleWheeledSimulation sim;
+		if (car)
+			sim = car.GetSimulation();
+		if (sim)
+			gear = sim.GearboxGetEfficiencyState();
+		bool held = gear >= 0 && gear < 0.001 && result != EMoveError.ENTITY_CANT_MOVE &&
+			SCR_AIVehicleUsability.VehicleCanMove(vehicle) && !System.IsCLIParam("zcrNoHeldStay");
+		if (!m_bZcrVehMoveLogged)
+		{
+			m_bZcrVehMoveLogged = true;
+			vector at = vehicle.GetOrigin();
+			Print(string.Format("[ZCR][VEHMOVE] group=%1 result=%2 gear=%3 held=%4 x=%5 z=%6", m_Group.GetID(),
+				SCR_Enum.GetEnumName(EMoveError, result), gear, held, (int)at[0], (int)at[2]));
+		}
+		return held;
 	}
 
 	protected bool AICF_HandleDefendArrival(int result, int handler, bool related, vector location)
