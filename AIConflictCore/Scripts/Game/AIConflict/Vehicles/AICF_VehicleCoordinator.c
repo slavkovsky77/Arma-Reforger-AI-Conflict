@@ -699,8 +699,20 @@ class AICF_VehicleCoordinator
 			// a base of its side that can give it a vehicle; further out it keeps walking.
 			if (!ZcrNearRideBase(assignment.GetFactionKey(), marcher.GetOrigin()))
 			{
-				reason = "ZCR_FAR_FROM_RIDE_BASE";
-				return false;
+				// ZCR, 2 Nov (note 508 - Martin: "really the only should walk long distances when car broke down"): in his
+				// watched Soviet run 10 of the 23 teams refused here stood ~160-290 m from a base and walked a 0.9-2 km march -
+				// most of the run's late walking. A team out past -aicfRideFromBaseMeters still rides when a base that can give
+				// it a vehicle (the spawner tries the nearest first) is within -aicfRideDetourMeters (500; 0 = off) and its
+				// march is at least 3 times the walk back (teams jog ~3 m/s; 180 s to reach the vehicle spot).
+				float back = ZcrRideBaseDistance(assignment.GetFactionKey(), marcher.GetOrigin());
+				float march = vector.DistanceXZ(marcher.GetOrigin(), assignment.GetTargetPosition());
+				if (back < 0 || back > ZcrRideDetourMeters() || march < 3 * back)
+				{
+					reason = "ZCR_FAR_FROM_RIDE_BASE";
+					return false;
+				}
+				Print(string.Format("[ZCR][RIDEDETOUR] faction=%1 slot=%2 back_m=%3 march_m=%4", assignment.GetFactionKey(), slot.GetSlotId(),
+					Math.Round(back), Math.Round(march)), LogLevel.NORMAL);
 			}
 			// ZCR, 29 Oct (the one-point runs, 28 Oct): 5-9 rides of a side started from one HQ at once and blocked
 			// each other between the pads and its one road out - 15 of 16 rides given up 'stuck in transit' were
@@ -964,9 +976,28 @@ class AICF_VehicleCoordinator
 		float meters = ZcrRideFromBaseMeters();
 		if (meters <= 0 || !m_Campaign || !m_ConflictAdapter)
 			return true;
+		if (!SCR_CampaignFaction.Cast(GetGame().GetFactionManager().GetFactionByKey(factionKey)))
+			return true;
+		float d = ZcrRideBaseDistance(factionKey, spot);
+		return d >= 0 && d <= meters;
+	}
+
+	static float ZcrRideDetourMeters()
+	{
+		string value;
+		if (System.GetCLIParam("aicfRideDetourMeters", value) && !value.IsEmpty())
+			return Math.Max(0, value.ToFloat());
+		return 500;
+	}
+
+	// The distance to the nearest base of this side that can give a vehicle (-1: none).
+	protected float ZcrRideBaseDistance(FactionKey factionKey, vector spot)
+	{
+		if (!m_Campaign || !m_ConflictAdapter)
+			return -1;
 		SCR_CampaignFaction faction = SCR_CampaignFaction.Cast(GetGame().GetFactionManager().GetFactionByKey(factionKey));
 		if (!faction)
-			return true;
+			return -1;
 		array<SCR_CampaignMilitaryBaseComponent> bases = {};
 		SCR_CampaignMilitaryBaseManager manager = m_Campaign.GetBaseManager();
 		if (manager)
@@ -974,15 +1005,19 @@ class AICF_VehicleCoordinator
 		SCR_CampaignMilitaryBaseComponent main = faction.GetMainBase();
 		if (main && !bases.Contains(main))
 			bases.Insert(main);
+		float best = -1;
 		foreach (SCR_CampaignMilitaryBaseComponent base : bases)
 		{
-			if (!base || !base.GetOwner() || vector.DistanceXZ(base.GetOwner().GetOrigin(), spot) > meters)
+			if (!base || !base.GetOwner())
+				continue;
+			float d = vector.DistanceXZ(base.GetOwner().GetOrigin(), spot);
+			if (best >= 0 && d >= best)
 				continue;
 			string why = m_ConflictAdapter.GetSpawnRejectionReason(base, faction);
 			if (why.IsEmpty() || (base == main && (why == "SPAWN_POINT_INACTIVE" || why == "SPAWN_FACTION_INITIALIZING")))
-				return true;
+				best = d;
 		}
-		return false;
+		return best;
 	}
 
 	protected ref array<string> m_aZcrRideFaction = {};
