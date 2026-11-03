@@ -4693,13 +4693,18 @@ class AICF_MatchController
 				faction,
 				"FALSE_COMPLETION_FULL_REPLAN");
 		}
+		// ZCR (3 Nov night, note 535): an attack team near its target replans with that target allowed - excluding it left the
+		// Farm battle's teams (one target) without any order, on the hold, for good.
+		SCR_CampaignMilitaryBaseComponent excludedTarget = failedTarget;
+		if (AICF_ZcrUnstick.NearAttackTarget(slot))
+			excludedTarget = null;
 		slot.ClearTemporaryRouteReplanHold();
 		slot.ResetFalseCompletionRecovery();
 		bool replanned = AssignFactionStrategicOrder(
 			slot,
 			faction,
 			"FALSE_COMPLETION_FULL_REPLAN",
-			failedTarget);
+			excludedTarget);
 		if (!replanned && !slot.IsRouteTargetDeferred(failedTarget))
 			replanned = m_OrderPlanner.RebuildCurrentOrder(
 				slot,

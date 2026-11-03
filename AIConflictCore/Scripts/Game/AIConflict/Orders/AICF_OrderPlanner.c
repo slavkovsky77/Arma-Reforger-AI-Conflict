@@ -2686,6 +2686,17 @@ class AICF_OrderPlanner
 				recoveryEndpoint,
 				endpointFailure,
 				slot.GetLastFalseCompletionEndpoint());
+			// ZCR (3 Nov night, note 535 - Martin, watching: "blue units are stuck lets fix that"): an attack team whose leg
+			// ended short of its objective and found no recovery leg went on a temporary hold on its own spot, and the hold's
+			// replan excluded the target it failed - in the Farm battle the only one - so it never moved again (US A3, A5, A6
+			// stood 300 m south of Farm for 20+ game minutes). Near its target it gets the leg toward the objective instead.
+			if (!endpointResolved && role == AICF_EGroupRole.ATTACK && AICF_ZcrUnstick.TowardObjective(slot, zcrObjective, recoveryEndpoint))
+			{
+				endpointResolved = true;
+				AICF_Stage2Diagnostics.Info("ZCR_FALSE_COMPLETION_TOWARD", string.Format(
+					"slot=%1 numeric_slot=%2 endpoint=%3 objective=%4 resolver_failure=%5", slot.GetSlotKey(), slot.GetSlotId(), recoveryEndpoint,
+					zcrObjective, endpointFailure));
+			}
 			if (endpointResolved)
 			{
 				targetPosition = recoveryEndpoint;
@@ -2713,7 +2724,7 @@ class AICF_OrderPlanner
 					AICF_Stage1Diagnostics.BaseKey(target),
 					endpointRevision);
 				endpointFallbackDetails +=
-					" endpoint_resolution=UNAVAILABLE next_action=REQUEST_TEMPORARY_ROUTE_REPLAN_HOLD reliability_budget_consumed=0";
+					" endpoint_resolution=UNAVAILABLE next_action=REQUEST_TEMPORARY_ROUTE_REPLAN_HOLD reliability_budget_consumed=0 failure=" + endpointFailure;
 				AICF_Stage2Diagnostics.Warning(
 					"FALSE_COMPLETION_ROUTE_ENDPOINT_UNAVAILABLE",
 					endpointFallbackDetails);
