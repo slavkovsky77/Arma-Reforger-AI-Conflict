@@ -392,6 +392,65 @@ class AICF_VehicleTransitFlow
 		return true;
 	}
 
+	// ZCR (3 Nov, note 519): 33 Farm battles - 241 of the 264 rides that failed in transit failed within 800 m of the
+	// objective, 186 of them after the driver got out of an intact vehicle (the danger reactions of DCO and the game: a shot
+	// or a blast near, a stop with a threat close) or his seat was found empty. The crew recovery put him back up to twice and
+	// gave up after a median 85 s, the team standing at the vehicle 200-600 m from the enemy; of the rides that lost their
+	// driver within 1 km of the objective 179 failed anyway, 29 delivered. Now within -aicfContactDismountM (default 800) of
+	// the ride's tactical target, a ride whose crew is being recovered or with a living member out of the vehicle ends as a
+	// dismount there: the team goes on foot at once. 0: off (the A/B).
+	//   [ZCR][CONTACTOUT] faction= op= why=crew|out out= alive= from_target_m= x= z=
+	protected static float s_fZcrContactM = -1;
+
+	protected static bool ZcrContactDismount(AICF_TransportTrip trip, AICF_VehicleMovementState state)
+	{
+		if (s_fZcrContactM < 0)
+		{
+			s_fZcrContactM = 800;
+			string value;
+			if (System.GetCLIParam("aicfContactDismountM", value) && !value.IsEmpty())
+				s_fZcrContactM = Math.Max(0, value.ToFloat());
+		}
+		if (s_fZcrContactM <= 0 || !trip || !state || !trip.GetLease() || !trip.GetAssignment() || !trip.GetAssignment().GetGroup())
+			return false;
+		IEntity vehicle = trip.GetLease().GetVehicle();
+		if (!vehicle)
+			return false;
+		vector target = state.GetTacticalTarget();
+		if (target == vector.Zero)
+			target = trip.GetAssignment().GetTargetPosition();
+		float fromTarget = vector.DistanceXZ(vehicle.GetOrigin(), target);
+		if (fromTarget > s_fZcrContactM)
+			return false;
+		string why;
+		int outside, alive;
+		array<AIAgent> agents = {};
+		trip.GetAssignment().GetGroup().GetAgents(agents);
+		foreach (AIAgent agent : agents)
+		{
+			if (!agent)
+				continue;
+			IEntity man = agent.GetControlledEntity();
+			if (!AICF_GroupRuntime.IsAliveCharacter(man))
+				continue;
+			alive++;
+			if (CompartmentAccessComponent.GetVehicleIn(man) != vehicle)
+				outside++;
+		}
+		if (alive == 0)
+			return false;
+		if (state.GetCrewRecoveryToken())
+			why = "crew";
+		else if (outside > 0)
+			why = "out";
+		else
+			return false;
+		vector at = vehicle.GetOrigin();
+		Print(string.Format("[ZCR][CONTACTOUT] faction=%1 op=%2 why=%3 out=%4 alive=%5 from_target_m=%6 x=%7 z=%8", trip.GetFactionKey(),
+			trip.GetOperationId(), why, outside, alive, Math.Round(fromTarget), Math.Round(at[0]), Math.Round(at[2])), LogLevel.NORMAL);
+		return true;
+	}
+
 	// ZCR (2 Nov, note 498): which member broke the cohesion - A0's ride failed at the HQ with all four aboard at boarding.
 	// [ZCR][COHESION] faction= op= member= m= max_m= in= (in: the vehicle he is in, none) x= z=
 	protected static void ZcrLogCohesion(AICF_TransportTrip trip, IEntity vehicle, float maximumMeters)
@@ -443,6 +502,12 @@ class AICF_VehicleTransitFlow
 
 		AICF_VehicleMovementState state = trip.GetMovementState();
 		EnsureStateStarted(trip, state, nowMs);
+		// ZCR (3 Nov, note 519): a ride into the fight ends where its team got out.
+		if (ZcrContactDismount(trip, state))
+		{
+			AbortOwnedActions(trip);
+			return AICF_TripOutcome.StartDismount("ZCR_CONTACT_DISMOUNT", causationId);
+		}
 		// Exact crew recovery owns a deliberately suspended route. Advance that
 		// token before interpreting superseded/current waypoint shape as route
 		// reconciliation work.

@@ -206,6 +206,10 @@ class AICF_ConstructionSiteSearch
 			attempt = CandidateTransformIndex(attempt);
 			order.m_iCandidateIndex = attempt;
 			offset = CandidateOffset(attempt, extent, outer, order.m_fYaw);
+			// ZCR (3 Nov, note 518): a fortification away from its plan faces the enemy first (AICF_ZcrFortPlan.FallbackYaw).
+			float facedYaw;
+			if (AICF_ZcrFortPlan.FallbackYaw(order, searchCenter + offset, attempt, facedYaw))
+				order.m_fYaw = facedYaw;
 		}
 		Math3D.AnglesToMatrix(Vector(order.m_fYaw, 0, 0), order.m_aTransform);
 		// Первые центры рядом с реальным stock spawn: короткий подход обычно

@@ -280,6 +280,30 @@ class AICF_ZcrFortPlan
 		return true;
 	}
 
+	// ZCR (3 Nov, note 518): today's search (no plan, or every planned spot failed - Farm's fenced paddocks fail the game's own
+	// checks even at spots it built on before) turns each candidate centre through 8 fixed headings, and the first 32 centres all
+	// face north (CandidateTransformIndex: every centre's first heading before any second one) - the building test's fallback
+	// fortifications faced a median 102 deg off the enemy. With -zcrFortFace the 8 headings are turned to the nearest enemy-held
+	// base from the candidate: facing it first, then +-30, +-60, +-90 deg and the back, the centres and every check as before.
+	static bool FallbackYaw(AICF_ConstructionOrder order, vector at, int attempt, out float yaw)
+	{
+		if (!order || order.m_eType != AICF_EConstructionType.FORTIFICATION || !System.IsCLIParam("zcrFortFace") || !order.m_Base || attempt < 0)
+			return false;
+		vector threat = Threat(order.m_Base, order.m_Faction);
+		if (threat == vector.Zero)
+			return false;
+		int k = attempt % 8;
+		float turn = 180;
+		if (k < 7)
+		{
+			turn = ((k + 1) / 2) * 30;
+			if (k % 2 == 0)
+				turn = -turn;
+		}
+		yaw = YawFor(Bearing(at, threat) + turn);
+		return true;
+	}
+
 	static string BaseName(SCR_CampaignMilitaryBaseComponent base)
 	{
 		if (!base)
