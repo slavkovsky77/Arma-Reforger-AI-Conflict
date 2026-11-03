@@ -5900,6 +5900,9 @@ class AICF_MatchController
 				slot.GetStuckEpisodeAnchor(),
 				stuckAnchorDelta));
 
+		// ZCR (note 528): soldiers wedged in rocks or props hop to free ground before the rebuild (AICF_ZcrUnstick).
+		AICF_ZcrUnstick.TryNudge(slot, stuckEpisodeId);
+
 		// Allow the configured number of real route rebuilds. If all of them fail to
 		// produce leader progress, preserve the field group under a durable local
 		// hold instead of deleting it and teleporting its replacement to a MOB.
