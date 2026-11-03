@@ -1495,6 +1495,8 @@ class AICF_OrderPlanner
 			AICF_InfantryApproachRoute route = slot.GetApproachRoute(slot.GetTargetBase());
 			if (route && route.CanResumeTileWait(slot.GetGroup()))
 				return RebuildCurrentOrder(slot, faction, "INFANTRY_APPROACH_TILE_READY");
+			if (route && route.ZcrLiveTurnedToWait(slot.GetSlotId()))
+				return RebuildCurrentOrder(slot, faction, "ZCR_LIVE_WAIT");
 		}
 		IEntity leader = AICF_GroupRuntime.ResolveAliveLeader(slot.GetGroup());
 		if (!leader || vector.DistanceXZ(leader.GetOrigin(), waypoint.GetOrigin()) > waypoint.GetCompletionRadius())

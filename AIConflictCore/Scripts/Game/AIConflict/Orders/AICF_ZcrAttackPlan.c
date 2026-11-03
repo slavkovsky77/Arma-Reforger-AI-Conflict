@@ -245,6 +245,11 @@ class AICF_ZcrAttackPlan
 		f.Close();
 		if (!complete)
 			return;
+		foreach (string teamKey, AICF_ZcrPlan loaded : plans)
+		{
+			if (loaded.m_bGo)
+				LiveClearHold(loaded.m_sKey);
+		}
 		s_mLive = plans;
 		s_mLiveDroneTeams = droneTeams;
 		s_mLiveDroneTarget = droneTarget;
@@ -276,10 +281,26 @@ class AICF_ZcrAttackPlan
 		return plan;
 	}
 
+	// Per team and kind of wait (wait and support differ in hold_s), not per hold point (3 Nov, note 515): the planner redraws
+	// a team's route every 30 s and its hold point moved with it, so the wait never started - 73 waits, 0 holds in 8 battles.
 	protected static string LiveHoldKey(AICF_ZcrPlan plan)
 	{
-		vector h = plan.m_aLanes[0].m_vHold;
-		return string.Format("%1@%2_%3", plan.m_sKey, Math.Round(h[0] / 10), Math.Round(h[2] / 10));
+		return plan.m_sKey + "@" + plan.m_iHoldS;
+	}
+
+	// A go for a team ends its wait: the next wait starts its own timer.
+	protected static void LiveClearHold(string teamKey)
+	{
+		array<string> gone = {};
+		foreach (string k, float at : s_mLiveHoldAt)
+		{
+			if (k.IndexOf(teamKey + "@") == 0)
+				gone.Insert(k);
+		}
+		foreach (string g : gone)
+		{
+			s_mLiveHoldAt.Remove(g);
+		}
 	}
 
 	// The team is at its live plan's hold point (the wait starts the first time, per hold point).

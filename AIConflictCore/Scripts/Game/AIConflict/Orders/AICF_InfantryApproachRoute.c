@@ -12,6 +12,8 @@ class AICF_InfantryApproachRoute
 	protected bool m_bZcrHolding;      // ZCR: waiting at the attack plan's hold line (AICF_ZcrAttackPlan)
 	protected string m_sZcrHoldKey;    // ZCR: ... of that plan (several plans run at once in the normal matches)
 	protected bool m_bZcrLive;         // ZCR: the last leg came from a live plan (lab/liveplan.py)
+	protected int m_iZcrLiveGo = -1;   // ZCR: ... with go (1) or wait (0); -1 not a live leg
+	protected float m_fZcrLiveCheckAt; // ZCR: world ms of the last ZcrLiveTurnedToWait look
 
 	int GetLastCover()
 	{
@@ -21,6 +23,20 @@ class AICF_InfantryApproachRoute
 	bool ZcrHolding()
 	{
 		return m_bZcrHolding;
+	}
+
+	// ZCR, 3 Nov (note 515): the team's live plan turned to wait or support since its leg toward the objective was given.
+	// The planner rebuilds the leg (to the hold point) - a leg used to run to its end first, so Gemini's waits came too late.
+	bool ZcrLiveTurnedToWait(int numericSlot)
+	{
+		if (!m_bZcrLive || m_iZcrLiveGo != 1 || m_bZcrHolding || m_bDisabled || !m_Target || !m_Target.GetOwner() || !GetGame().GetWorld())
+			return false;
+		float now = GetGame().GetWorld().GetWorldTime();
+		if (now - m_fZcrLiveCheckAt < 5000)
+			return false;
+		m_fZcrLiveCheckAt = now;
+		AICF_ZcrPlan plan = AICF_ZcrAttackPlan.Live(m_sSide, numericSlot, m_Target.GetOwner().GetOrigin());
+		return plan && !AICF_ZcrAttackPlan.LiveGo(plan);
 	}
 
 	bool CanResumeTileWait(SCR_AIGroup group)
@@ -75,6 +91,7 @@ class AICF_InfantryApproachRoute
 	{
 		candidate = objective;
 		m_bZcrLive = false;
+		m_iZcrLiveGo = -1;
 		// ZCR, 29 Oct: the team's attack plan read from the map (AICF_ZcrAttackPlan, lab/attackplan.py) - its lanes; the plan
 		// from the origin nearest where this approach started.
 		AICF_ZcrPlan plan = AICF_ZcrAttackPlan.ForTeam(m_sSide, numericSlot, objective, m_vOrigin);
@@ -201,6 +218,9 @@ class AICF_InfantryApproachRoute
 		int n = lane.m_aPoints.Count();
 		m_sZcrHoldKey = AICF_ZcrAttackPlan.HoldKey(m_sSide, plan);
 		bool go = AICF_ZcrAttackPlan.LiveGo(plan);
+		m_iZcrLiveGo = 0;
+		if (go)
+			m_iZcrLiveGo = 1;
 		float toObjective = vector.DistanceXZ(leader, objective);
 		int nearest;
 		int holdIndex;
