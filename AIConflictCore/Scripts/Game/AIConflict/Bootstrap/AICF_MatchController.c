@@ -1565,6 +1565,12 @@ class AICF_MatchController
 			m_EconomySystem.UpdateLogistics(m_USFaction, m_USSRFaction);
 		ProcessFaction(m_USState, m_USFaction);
 		ProcessFaction(m_USSRState, m_USSRFaction);
+		if (m_bRosterReady && System.GetTickCount() >= m_iZcrWaveCheckAtMs)
+		{
+			m_iZcrWaveCheckAtMs = System.GetTickCount() + 15000;
+			ZcrSecondWave(m_USState, m_USFaction);
+			ZcrSecondWave(m_USSRState, m_USSRFaction);
+		}
 		if (m_bRosterReady && m_InfantryRecruitment)
 		{
 			int cap = m_Config.GetMaxAgentsPerFaction();
@@ -1617,6 +1623,83 @@ class AICF_MatchController
 		EvaluateVictory();
 		if (m_Loadouts)
 			m_Loadouts.Update();
+	}
+
+	// ZCR (3 Nov, note 530 - Martin: "farm is actually captured and both side actually atack defent the point"): a second
+	// wave. In six Farm battles the side that lost Farm never came back: its attack teams were whittled to 1-2 men and never
+	// refilled (the side at its cap of 50), while 20 of its soldiers stood in 5 home-defence teams nobody attacked. With
+	// -aicfZcrSecondWave 1, when a side's attack teams are down to half their men, its home base is not threatened and an
+	// attack team still has a base to take, home-defence teams join the attack until the attackers are back to half, at
+	// least two at a time (no lone team walking into the drones); -aicfZcrSecondWaveKeep (default 1) teams stay home.
+	// Logs ZCR_SECOND_WAVE. Checked every 15 s.
+	protected int m_iZcrWaveCheckAtMs;
+
+	protected void ZcrSecondWave(AICF_FactionState state, SCR_CampaignFaction faction)
+	{
+		string waveValue;
+		if (!state || !faction || !m_OrderPlanner || !System.GetCLIParam("aicfZcrSecondWave", waveValue) || waveValue != "1")
+			return;
+		int keep = 1;
+		string keepValue;
+		if (System.GetCLIParam("aicfZcrSecondWaveKeep", keepValue) && !keepValue.IsEmpty())
+			keep = keepValue.ToInt();
+		int attackAlive;
+		int attackFull;
+		bool hasTarget;
+		array<AICF_GroupSlot> defenders = {};
+		for (int i = 0; i < state.GetSlotCount(); i++)
+		{
+			AICF_GroupSlot slot = state.GetSlot(i);
+			if (!slot)
+				continue;
+			if (slot.GetRole() == AICF_EGroupRole.ATTACK)
+			{
+				attackFull += slot.GetDesiredSize();
+				if (slot.GetGroup())
+					attackAlive += AICF_GroupRuntime.CountAliveAgents(slot.GetGroup());
+				if (slot.GetTargetBase() && slot.GetTargetBase().GetFaction() != faction)
+					hasTarget = true;
+			}
+			else if (slot.GetRole() == AICF_EGroupRole.DEFEND)
+			{
+				defenders.Insert(slot);
+			}
+		}
+		if (attackFull <= 0 || attackAlive * 2 >= attackFull || !hasTarget || defenders.Count() <= keep)
+			return;
+		SCR_CampaignMilitaryBaseComponent home = faction.GetMainBase();
+		if (home && (home.GetCaptureState() != SCR_EBaseCaptureState.NONE || home.IsBeingCaptured() || home.AreEnemiesPresent()))
+			return;
+		int startAlive = attackAlive;
+		int startFull = attackFull;
+		int committed;
+		string committedKeys;
+		for (int d = keep; d < defenders.Count(); d++)
+		{
+			if (committed >= 2 && attackAlive * 2 >= attackFull)
+				break;
+			AICF_GroupSlot defender = defenders[d];
+			if (!defender.IsCombatReady() || !defender.GetGroup() || defender.IsRecruitingInfantry() || defender.IsResupplyingEquipment() ||
+				(m_VehicleCoordinator && m_VehicleCoordinator.IsControllingMovement(defender)))
+				continue;
+			int defenderAlive = AICF_GroupRuntime.CountAliveAgents(defender.GetGroup());
+			if (defender.HasPendingOrderRecovery())
+				SupersedePendingOrderRecovery(defender, faction, "ZCR_SECOND_WAVE");
+			if (!state.ApplyCommanderConfiguration(defender.GetSlotId(), AICF_EGroupRole.ATTACK, defender.GetUnitType(), defender.GetDesiredSize()))
+				continue;
+			m_OrderPlanner.ClearOrder(defender);
+			AssignFactionStrategicOrder(defender, faction, "ZCR_SECOND_WAVE");
+			attackAlive += defenderAlive;
+			attackFull += defender.GetDesiredSize();
+			committed++;
+			committedKeys += defender.GetSlotKey() + ",";
+		}
+		if (committed <= 0)
+			return;
+		AICF_Stage1Diagnostics.Info("ZCR_SECOND_WAVE", string.Format(
+			"faction=%1 attack_alive=%2 attack_full=%3 committed=%4 slots=%5 defenders_left=%6 attack_alive_after=%7 attack_full_after=%8",
+			faction.GetFactionKey(), startAlive, startFull, committed, committedKeys, defenders.Count() - committed, attackAlive, attackFull));
+		SyncStrategicUIState();
 	}
 
 	protected void ProcessFaction(AICF_FactionState factionState, SCR_CampaignFaction faction)
