@@ -41,6 +41,52 @@ class AICF_ZcrUnstick
 		return vector.DistanceXZ(leader.GetOrigin(), slot.GetTargetBase().GetOwner().GetOrigin()) <= nearM;
 	}
 
+	// A stuck attack team near its objective gets a new leg toward it (3 Nov, note 530). AI Conflict's leg is a random
+	// reachable point up to 140 m away, the one ending nearest the objective but up to 80 m farther allowed - for a team
+	// stopped 200 m out by a fight, a point beside it (Farm, 3 Nov 19:51: US A0's four legs ended 130-230 m from Farm, the
+	// team 190 m out; 20 minutes, nobody in the farm). Within -aicfZcrNoHoldNearM of the target the leg ends up to 80 m
+	// closer on the line to the objective (the objective itself inside 100 m), on the navmesh, the straight line first,
+	// then 20 and 40 degrees off it. -aicfZcrTowardLeg 0 = AI Conflict's leg.
+	static bool TowardObjective(AICF_GroupSlot slot, vector objective, out vector endpoint)
+	{
+		string value;
+		if ((System.GetCLIParam("aicfZcrTowardLeg", value) && value == "0") || !NearAttackTarget(slot))
+			return false;
+		SCR_AIGroup group = slot.GetGroup();
+		AIPathfindingComponent path = AIPathfindingComponent.Cast(group.FindComponent(AIPathfindingComponent));
+		IEntity leader = AICF_GroupRuntime.ResolveAliveLeader(group);
+		if (!path || !path.GetNavmeshComponent() || !leader)
+			return false;
+		NavmeshWorldComponent navmesh = path.GetNavmeshComponent();
+		BaseWorld world = GetGame().GetWorld();
+		vector origin = leader.GetOrigin();
+		float dist = vector.DistanceXZ(origin, objective);
+		float step = dist;
+		if (dist > 100)
+			step = Math.Min(80, dist - 60);
+		float baseAngle = Math.Atan2(objective[2] - origin[2], objective[0] - origin[0]);
+		for (int k; k < 5; k++)
+		{
+			// 0, +20, -20, +40, -40 degrees off the line to the objective
+			float turn = ((k + 1) / 2) * 20;
+			if (k % 2 == 0)
+				turn = -turn;
+			float angle = baseAngle + turn * Math.DEG2RAD;
+			vector query = origin + Vector(Math.Cos(angle) * step, 0, Math.Sin(angle) * step);
+			query[1] = world.GetSurfaceY(query[0], query[2]);
+			vector spot;
+			if (!navmesh.IsTileLoaded(query) || !path.GetClosestPositionOnNavmesh(query, "8 4 8", spot))
+				continue;
+			if (ChimeraWorldUtils.TryGetWaterSurfaceSimple(world, spot - "0 0.5 0"))
+				continue;
+			if (dist > 100 && vector.DistanceXZ(spot, objective) > dist - 25)
+				continue;
+			endpoint = spot;
+			return true;
+		}
+		return false;
+	}
+
 	//! The members of slot's group that stood still since its previous stuck detection, moved; returns how many.
 	static int TryNudge(AICF_GroupSlot slot, int episodeId)
 	{

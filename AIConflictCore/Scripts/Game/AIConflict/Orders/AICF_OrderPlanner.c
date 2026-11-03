@@ -2801,8 +2801,11 @@ class AICF_OrderPlanner
 		vector objectivePosition;
 		vector endpoint;
 		string endpointFailure;
-		if (!TryResolveTargetPosition(target, slot.GetRole(), objectivePosition) ||
-			!TryResolveFalseCompletionEndpoint(slot.GetGroup(), objectivePosition, 1, endpoint, endpointFailure))
+		// ZCR: near its objective an attack team's new leg goes toward it (AICF_ZcrUnstick.TowardObjective).
+		bool hasObjective = TryResolveTargetPosition(target, slot.GetRole(), objectivePosition);
+		bool toward = hasObjective && AICF_ZcrUnstick.TowardObjective(slot, objectivePosition, endpoint);
+		if (!hasObjective ||
+			(!toward && !TryResolveFalseCompletionEndpoint(slot.GetGroup(), objectivePosition, 1, endpoint, endpointFailure)))
 		{
 			AICF_Stage2Diagnostics.Warning("STUCK_ROUTE_ENDPOINT_UNAVAILABLE",
 				string.Format("faction=%1 slot=%2 group_generation=%3 assignment_revision=%4 target=%5 reason=%6",
@@ -2828,9 +2831,9 @@ class AICF_OrderPlanner
 			scriptedWaypoint.AddSetting(SCR_AIGroupFormationSetting.Create(
 				SCR_EAISettingOrigin.WAYPOINT, SCR_EAIGroupFormation.Wedge));
 		AICF_Stage2Diagnostics.Info("STUCK_ROUTE_ENDPOINT_SELECTED",
-			string.Format("faction=%1 slot=%2 group_generation=%3 assignment_revision=%4 target=%5 endpoint=%6 objective=%7",
+			string.Format("faction=%1 slot=%2 group_generation=%3 assignment_revision=%4 target=%5 endpoint=%6 objective=%7 toward=%8",
 				faction.GetFactionKey(), slot.GetSlotId(), slot.GetSpawnGeneration(),
-				slot.GetStrategicAssignmentRevision(), AICF_Stage1Diagnostics.BaseKey(target), endpoint, objectivePosition));
+				slot.GetStrategicAssignmentRevision(), AICF_Stage1Diagnostics.BaseKey(target), endpoint, objectivePosition, toward));
 		return waypoint;
 	}
 
