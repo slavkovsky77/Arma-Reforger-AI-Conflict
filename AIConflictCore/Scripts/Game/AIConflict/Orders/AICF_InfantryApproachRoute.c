@@ -289,11 +289,15 @@ class AICF_InfantryApproachRoute
 			candidate = lane.m_aPoints[join];
 			return true;
 		}
+		// 3 Nov night (note 535 - Martin: "push from closes building to closest tree line and thoe the points ... movement
+		// from cover to cover should be fast"): a live route's points are its covers (lab/liveplan.py cover_bounds: the far
+		// edge of each building or tree line on the way, every ~120 m inside a long one, every ~100 m across a long open
+		// stretch) - a leg to each, not to the first point 120 m along, which skipped the covers between.
 		float along;
 		for (int j = nearest + 1; j < n; j++)
 		{
 			along += vector.DistanceXZ(lane.m_aPoints[j - 1], lane.m_aPoints[j]);
-			if (along >= 120 || j == n - 1)
+			if (along >= 40 || j == n - 1)
 			{
 				candidate = lane.m_aPoints[j];
 				return true;
