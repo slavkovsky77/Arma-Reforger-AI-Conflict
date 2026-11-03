@@ -18,6 +18,29 @@ class AICF_ZcrUnstick
 		return !(System.GetCLIParam("aicfZcrUnstick", value) && value == "0");
 	}
 
+	// No field hold in front of the objective (3 Nov, note 530 - Martin: "continue developing so farm is actually captured
+	// and both sides actually attack and defend the point"). AI Conflict's stuck check reads "no route progress for the stuck
+	// timeout, three times" as stuck and then parks the team for good on its own spot (FIELD_HOLD). Near its objective that
+	// is a team fighting its way in: in 55 Farm battles 145 of 179 field holds were within 400 m of Farm - 2.6 attack teams a
+	// battle frozen in front of it (no-drones battle, 3 Nov 18:22: Soviet A1, A2, A5 parked ~300 m south, Farm never
+	// contested). An attack team within -aicfZcrNoHoldNearM (default 450 m; 0 = off) of its target base is never parked:
+	// each stuck detection rebuilds its order instead (and wedged men hop free).
+	static bool NearAttackTarget(AICF_GroupSlot slot)
+	{
+		if (!slot || slot.GetRole() != AICF_EGroupRole.ATTACK || !slot.GetTargetBase() || !slot.GetGroup())
+			return false;
+		float nearM = 450;
+		string value;
+		if (System.GetCLIParam("aicfZcrNoHoldNearM", value) && !value.IsEmpty())
+			nearM = value.ToFloat();
+		if (nearM <= 0)
+			return false;
+		IEntity leader = AICF_GroupRuntime.ResolveAliveLeader(slot.GetGroup());
+		if (!leader || !slot.GetTargetBase().GetOwner())
+			return false;
+		return vector.DistanceXZ(leader.GetOrigin(), slot.GetTargetBase().GetOwner().GetOrigin()) <= nearM;
+	}
+
 	//! The members of slot's group that stood still since its previous stuck detection, moved; returns how many.
 	static int TryNudge(AICF_GroupSlot slot, int episodeId)
 	{
@@ -56,6 +79,10 @@ class AICF_ZcrUnstick
 			bool had = s_mLast.Find(id, before);
 			s_mLast.Set(id, now);
 			if (!had || vector.DistanceXZ(before, now) > 1.5)
+				continue;
+			// Only a man jammed into something (no room where he stands - a rock, a prop): one merely holding still in a fight
+			// stays (the first no-drones battle: 2-4 m hops of attack teams standing 300 m from Farm, none wedged).
+			if (RoomAt(GetGame().GetWorld(), character, now))
 				continue;
 			int done;
 			if (s_mNudged.Find(id, done) && done == episodeId)

@@ -5243,7 +5243,8 @@ class AICF_MatchController
 
 		bool enforceStuckBudget = alreadyCountsAsStuck || consumesStuckBudget;
 		if (enforceStuckBudget &&
-			slot.GetStuckRecoveryCount() >= m_Stage2Config.GetMaxStuckRecoveries())
+			slot.GetStuckRecoveryCount() >= m_Stage2Config.GetMaxStuckRecoveries() &&
+			!AICF_ZcrUnstick.NearAttackTarget(slot))   // ZCR (note 530): never parked in front of its objective
 		{
 			HoldPersistentStuckGroup(factionState, faction, slot, target, distanceMeters);
 			return;
@@ -5906,7 +5907,8 @@ class AICF_MatchController
 		// Allow the configured number of real route rebuilds. If all of them fail to
 		// produce leader progress, preserve the field group under a durable local
 		// hold instead of deleting it and teleporting its replacement to a MOB.
-		if (slot.GetStuckRecoveryCount() >= m_Stage2Config.GetMaxStuckRecoveries())
+		if (slot.GetStuckRecoveryCount() >= m_Stage2Config.GetMaxStuckRecoveries() &&
+			!AICF_ZcrUnstick.NearAttackTarget(slot))   // ZCR (note 530): never parked in front of its objective
 		{
 			HoldPersistentStuckGroup(factionState, faction, slot, target, distanceMeters);
 			return;
