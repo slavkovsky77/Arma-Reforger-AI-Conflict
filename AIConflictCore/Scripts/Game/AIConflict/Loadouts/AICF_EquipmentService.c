@@ -425,6 +425,11 @@ class AICF_EquipmentService
 			Tick(record, now, graphReady);
 		}
 		// Устаревший preset не удерживает свой preview world до конца матча.
+		// ZCR (3 Nov): only over 64 plans. Freeing an unused plan mid-match deletes its preview soldier, and that delete
+		// failed 25 times in 16 runs ("Can't delete instance (of class: 'MuzzleComponent') with non-zero references",
+		// AICF_EquipmentDraft.Clear); the watched review battle crashed on heap corruption 25 s after one. A match uses a
+		// few dozen plans (faction x recruit x loadout), so they stay until it ends (Stop).
+		if (m_aPlans.Count() > 64)
 		for (int planIndex = m_aPlans.Count() - 1; planIndex >= 0; planIndex--)
 		{
 			bool used;
