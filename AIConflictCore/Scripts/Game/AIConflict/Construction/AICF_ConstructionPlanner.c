@@ -185,8 +185,14 @@ class AICF_ConstructionPlanner
 				}
 				continue;
 			}
-			if (!order.IdentityValid() || !Commander(order.m_Faction) || m_Builders.HasUnfinishedWork(order.m_Base) ||
-				order.m_Base.AreEnemiesPresent() || order.m_Base.IsBeingCaptured() || order.m_Base.GetCaptureState() != SCR_EBaseCaptureState.NONE)
+			// ZCR (4 Nov evening, note 538): a field fortification goes on while enemies are at its base - the side holding a
+			// fought-over town is the one that wants it (the test: 49 sites found 200-300 m out, then cancelled, Soviets in the town);
+			// a capture under way still stops it.
+			bool zcrFieldOn = order.m_iCandidateIndex <= AICF_ZcrFortPlan.FIELD_INDEX && !order.m_Base.IsBeingCaptured();
+			bool contested = order.m_Base.AreEnemiesPresent() || order.m_Base.IsBeingCaptured() || order.m_Base.GetCaptureState() != SCR_EBaseCaptureState.NONE;
+			if (zcrFieldOn)
+				contested = false;
+			if (!order.IdentityValid() || !Commander(order.m_Faction) || m_Builders.HasUnfinishedWork(order.m_Base) || contested)
 				Cancel(state, "LIFECYCLE_INVALIDATED");
 			else if (order.m_bPathContextSet && (!order.m_PathContext || order.m_PathContext != Commander(order.m_Faction).GetConstructionPathfinding()))
 				// Включает geometry checkpoint и ожидание commit budget: эти
