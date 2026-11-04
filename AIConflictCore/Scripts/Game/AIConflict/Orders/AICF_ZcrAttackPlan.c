@@ -168,6 +168,20 @@ class AICF_ZcrAttackPlan
 		return s_mLiveDroneTeams.Get(faction);
 	}
 
+	// The live general's strategy for a side (4 Nov, note 542 - Martin: "llm general should also think about not only tactics
+	// but battle strategy ... what soviet should try is (as it holds the points) for example I think I would try built
+	// bunkers because there is currently no cover and every defender gets killed by drones"): assault, fortify,
+	// hunt_drones or counter_drone ("strategy <faction> <stance>" in the plan file); empty: none given.
+	protected static ref map<string, string> s_mLiveStrategy = new map<string, string>();
+
+	static string LiveStrategy(string faction)
+	{
+		if (!LiveOn() || faction.IsEmpty())
+			return string.Empty;
+		LoadLive();
+		return s_mLiveStrategy.Get(faction);
+	}
+
 	static int LiveDroneTarget(string faction)
 	{
 		int target = -1;
@@ -201,6 +215,7 @@ class AICF_ZcrAttackPlan
 		map<string, ref AICF_ZcrPlan> plans = new map<string, ref AICF_ZcrPlan>();
 		map<string, int> droneTeams = new map<string, int>();
 		map<string, int> droneTarget = new map<string, int>();
+		map<string, string> strategy = new map<string, string>();
 		AICF_ZcrPlanLane lane;
 		bool complete;
 		while (f.ReadLine(line) >= 0)
@@ -216,6 +231,12 @@ class AICF_ZcrAttackPlan
 				break;
 			}
 			// "drones <faction> <teams> <target node, -1 none>": the live planner's drone order (ZCR_Strategist applies it).
+			if (v[0] == "strategy" && v.Count() >= 3)
+			{
+				strategy.Set(v[1], v[2]);
+				lane = null;
+				continue;
+			}
 			if (v[0] == "drones" && v.Count() >= 4)
 			{
 				droneTeams.Set(v[1], v[2].ToInt());
@@ -252,6 +273,7 @@ class AICF_ZcrAttackPlan
 		}
 		s_mLive = plans;
 		s_mLiveDroneTeams = droneTeams;
+		s_mLiveStrategy = strategy;
 		s_mLiveDroneTarget = droneTarget;
 		s_iLiveVersion = version;
 		Print(string.Format("[ZCR][LIVEPLAN] t=%1 event=loaded version=%2 teams=%3", Math.Round(now / 1000), version, plans.Count()), LogLevel.NORMAL);

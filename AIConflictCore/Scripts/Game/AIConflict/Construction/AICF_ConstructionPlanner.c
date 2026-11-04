@@ -357,6 +357,17 @@ class AICF_ConstructionPlanner
 		array<bool> coverage = {};
 		for (int type; type < AICF_EConstructionType.COUNT; type++)
 			coverage.Insert(Covered(order, type) || now < state.m_aSearchRetryAt[type]);
+		// ZCR (4 Nov, note 542 - Martin: "what soviet should try is (as it holds the points) ... built bunkers because there is
+		// currently no cover and every defender gets killed by drones"): the live general chose to fortify - at the point it
+		// holds (-zcrOnePoint) fortifications come first, up to ZCR_FORTIFY_MAX, decided every 20 s (the round of building
+		// types gave Farm 0-2 fortifications a battle, the rear bases 25-35).
+		bool zcrFortify = ZcrFortifyHere(order);
+		if (zcrFortify)
+		{
+			state.m_iDueAt = now + 20000;
+			coverage[AICF_EConstructionType.FORTIFICATION] = Fortifications() >= ZCR_FORTIFY_MAX ||
+				now < state.m_aSearchRetryAt[AICF_EConstructionType.FORTIFICATION];
+		}
 		// ZCR (21 Oct, Martin: "free guys should build much more"): one base of a side searches for its first
 		// depot at a time; the others build. In the watched matches every base searched 7-11 minutes for a
 		// depot site first and fortifications came at minute 21-24 of 30 (one a side a match).
@@ -373,6 +384,8 @@ class AICF_ConstructionPlanner
 			order.m_eType = AICF_EConstructionType.LIGHT_DEPOT;
 			if (!coverage[AICF_EConstructionType.LIGHT_DEPOT] && coverage[AICF_EConstructionType.SMALL_BARRACKS] && FirstDepot(order))
 				startType = AICF_EConstructionType.LIGHT_DEPOT;
+			if (zcrFortify && !coverage[AICF_EConstructionType.FORTIFICATION])
+				startType = AICF_EConstructionType.FORTIFICATION;
 			int type = commander.SelectConstructionType(coverage, startType);
 			if (type < 0)
 				return;
@@ -794,6 +807,21 @@ class AICF_ConstructionPlanner
 		if (System.GetCLIParam("aicfFortificationsPerBase", value) && !value.IsEmpty())
 			return Math.ClampInt(value.ToInt(), 0, 12);
 		return 5;      // ZCR 20 Oct: 5 (was 2) - "build much more"
+	}
+
+	static const int ZCR_FORTIFY_MAX = 8;
+
+	// The live general's fortify order for this order's base: the one-point battle's point (-zcrOnePoint, underscores for
+	// spaces) and its side's strategy 'fortify' (AICF_ZcrAttackPlan.LiveStrategy, lab/liveplan.py).
+	protected bool ZcrFortifyHere(AICF_ConstructionOrder order)
+	{
+		string onePoint;
+		if (!order || !order.m_Base || !System.GetCLIParam("zcrOnePoint", onePoint) || onePoint.IsEmpty())
+			return false;
+		onePoint.Replace("_", " ");
+		if (WidgetManager.Translate(order.m_Base.GetBaseName()) != onePoint)
+			return false;
+		return AICF_ZcrAttackPlan.LiveStrategy(order.m_sFaction) == "fortify";
 	}
 
 	// ZCR: a base is at the front when an enemy-held base is within 2.5 km - only there are fortifications built.
