@@ -12,6 +12,10 @@
 class AICF_ZcrPlanLane
 {
 	ref array<vector> m_aPoints = {};
+	// ZCR, 4 Nov (note 540 - Martin: "those waypoints dont have type like move, defense, hold, clear building, enter building
+	// ... cover?"): what the team does at each point of a live route - m move on, c a short stop in cover (a tree line's
+	// edge), e a stop with the men inside the buildings there (ZCR_HouseHold); lab/liveplan.py writes them ("x z c").
+	ref array<string> m_aActions = {};
 	vector m_vHold;
 }
 
@@ -288,7 +292,13 @@ class AICF_ZcrAttackPlan
 				plans.Set(v[1] + "|" + v[2], plan);
 			}
 			else if (lane && v.Count() >= 2)
+			{
 				lane.m_aPoints.Insert(Vector(v[0].ToFloat(), 0, v[1].ToFloat()));
+				string action = "m";
+				if (v.Count() >= 3)
+					action = v[2];
+				lane.m_aActions.Insert(action);
+			}
 		}
 		f.Close();
 		if (!complete)

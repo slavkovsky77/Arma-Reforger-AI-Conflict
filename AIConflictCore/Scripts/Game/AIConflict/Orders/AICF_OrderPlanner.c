@@ -2643,6 +2643,7 @@ class AICF_OrderPlanner
 		if (!TryResolveTargetPosition(target, role, targetPosition))
 			return null;
 		bool zcrHold;   // ZCR, 29 Oct: the attack plan's hold line - a timed Defend leg where the team waits (AICF_ZcrAttackPlan)
+		int zcrPauseS;  // ZCR, 4 Nov: a short stop at a live route's cover point (note 540)
 		if (!isRelay && role == AICF_EGroupRole.ATTACK && slot.GetUnitType() == AICF_EGroupUnitType.INFANTRY)
 		{
 			AICF_InfantryApproachRoute route = slot.GetApproachRoute(target);
@@ -2664,9 +2665,19 @@ class AICF_OrderPlanner
 				if (approachRoute)
 					targetPosition = approachEndpoint;
 				zcrHold = approachRoute && route.ZcrHolding();
+				// ZCR, 4 Nov (note 540): a live route's cover point is a short stop - c in cover at a tree line's edge, e with
+				// the men inside the buildings there (ZCR_HouseHold sends them in) - a timed defend leg, then the next bound.
+				if (approachRoute && !zcrHold)
+				{
+					string legAction = route.ZcrLegAction();
+					if (legAction == "c")
+						zcrPauseS = 15;
+					else if (legAction == "e")
+						zcrPauseS = 25;
+				}
 			}
 		}
-		if (zcrHold)
+		if (zcrHold || zcrPauseS > 0)
 			waypointPrefab = DEFEND_WAYPOINT_PREFAB;
 		// ZCR (2 Nov, note 494 - Martin: "team d1 now has defend airport base but they chill at hose somwhere completely
 		// different"): a defend team's recovery leg (a step of the route after a false completion or a failed ride) was a
@@ -2767,6 +2778,8 @@ class AICF_OrderPlanner
 			SCR_TimedWaypoint holdWaypoint = SCR_TimedWaypoint.Cast(waypoint);
 			if (zcrHold && holdWaypoint)
 				holdWaypoint.SetHoldingTime(30);
+			else if (zcrPauseS > 0 && holdWaypoint)
+				holdWaypoint.SetHoldingTime(zcrPauseS);
 		}
 		else
 		{

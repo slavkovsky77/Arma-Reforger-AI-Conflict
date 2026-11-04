@@ -14,10 +14,17 @@ class AICF_InfantryApproachRoute
 	protected bool m_bZcrLive;         // ZCR: the last leg came from a live plan (lab/liveplan.py)
 	protected int m_iZcrLiveGo = -1;   // ZCR: ... with go (1) or wait (0); -1 not a live leg
 	protected float m_fZcrLiveCheckAt; // ZCR: world ms of the last ZcrLiveTurnedToWait look
+	protected string m_sZcrLegAction = "m";   // ZCR, 4 Nov (note 540): the live leg's point - m move, c cover stop, e enter buildings
 
 	int GetLastCover()
 	{
 		return m_iLastCover;
+	}
+
+	// The action at the live leg's end point (AICF_ZcrPlanLane.m_aActions): m, c or e.
+	string ZcrLegAction()
+	{
+		return m_sZcrLegAction;
 	}
 
 	bool ZcrHolding()
@@ -214,6 +221,7 @@ class AICF_InfantryApproachRoute
 		candidate = objective;
 		m_bZcrHolding = false;
 		m_bZcrLive = true;
+		m_sZcrLegAction = "m";
 		AICF_ZcrPlanLane lane = plan.m_aLanes[0];
 		int n = lane.m_aPoints.Count();
 		m_sZcrHoldKey = AICF_ZcrAttackPlan.HoldKey(m_sSide, plan);
@@ -300,6 +308,8 @@ class AICF_InfantryApproachRoute
 			if (along >= 40 || j == n - 1)
 			{
 				candidate = lane.m_aPoints[j];
+				if (j < lane.m_aActions.Count())
+					m_sZcrLegAction = lane.m_aActions[j];
 				return true;
 			}
 		}
