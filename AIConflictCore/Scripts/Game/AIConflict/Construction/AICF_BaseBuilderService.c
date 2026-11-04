@@ -455,7 +455,12 @@ class AICF_BaseBuilderService
 		{
 			StopTool(builder);
 			builder.m_iWorkAtMs = 0;
-			if (now - builder.m_iMoveAtMs >= MOVE_TIMEOUT_MS)
+			// ZCR (4 Nov evening, note 538): a field fortification 180-300 m out through a fought-over town gets 5 minutes, not 2
+			// (test 6: the builder made 50 m in 120 s and went home).
+			int moveTimeout = MOVE_TIMEOUT_MS;
+			if (builder.m_Target.m_AICFConstructionReceipt && builder.m_Target.m_AICFConstructionReceipt.m_iCandidateIndex <= AICF_ZcrFortPlan.FIELD_INDEX)
+				moveTimeout = 300000;
+			if (now - builder.m_iMoveAtMs >= moveTimeout)
 			{
 				builder.m_aDeferredTargets.Insert(builder.m_Target);
 				builder.m_aDeferredUntilMs.Insert(now + RETRY_DELAY_MS);
