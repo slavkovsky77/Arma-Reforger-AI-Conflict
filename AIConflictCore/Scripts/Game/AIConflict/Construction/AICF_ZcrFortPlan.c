@@ -319,6 +319,11 @@ class AICF_ZcrFortPlan
 	// event=field_spot / event=try ... field=1 / event=placed source=field. -aicfZcrFieldForts 0 turns it off.
 	static const float FIELD_M = 600;
 	static const int FIELD_INDEX = -100000;
+	// Each field spot is searched round (4 Nov night - the night's battles: every try at the spot itself and 6 m aside failed
+	// the game's checks, mostly PHYSICAL_OBSTRUCTION, also WATER, BASE_ACCESS_CORRIDOR, ROAD_OR_ACCESS_CORRIDOR): the spot,
+	// then 8 directions every FIELD_RING_M out to 5 rings (41 tries), the facing turned +-TURN_DEG in turn.
+	static const int FIELD_VARIANTS = 41;
+	static const float FIELD_RING_M = 6;
 	protected static ref map<string, ref array<ref AICF_ZcrFortSpot>> s_mField = new map<string, ref array<ref AICF_ZcrFortSpot>>();
 	protected static ref map<string, ref array<int>> s_mFieldOpen = new map<string, ref array<int>>();   // order token -> spots
 	protected static ref map<string, int> s_mFieldTries = new map<string, int>();
@@ -414,7 +419,7 @@ class AICF_ZcrFortPlan
 	}
 
 	// The site search's next field candidate for a fortification order of a field base (as Seed, the candidate index
-	// FIELD_INDEX - 10 x spot - variant).
+	// FIELD_INDEX - 100 x spot - variant).
 	protected static bool FieldSeed(AICF_ConstructionOrder order, out vector spot, out float yaw)
 	{
 		if (!FieldOn())
@@ -433,30 +438,31 @@ class AICF_ZcrFortPlan
 			s_mFieldOpen.Set(order.m_sToken, open);
 		}
 		int tries = s_mFieldTries.Get(order.m_sToken);
-		if (tries >= open.Count() * VARIANTS)
+		if (tries >= open.Count() * FIELD_VARIANTS)
 			return false;
 		s_mFieldTries.Set(order.m_sToken, tries + 1);
-		int index = open[tries / VARIANTS];
-		int variant = tries % VARIANTS;
+		int index = open[tries / FIELD_VARIANTS];
+		int variant = tries % FIELD_VARIANTS;
 		AICF_ZcrFortSpot chosen = spots[index];
 		if (variant == 0)
 			chosen.m_iOrders++;
 		float facing = chosen.m_fFacing;
-		if (variant == 1)
+		if (variant % 3 == 1)
 			facing += TURN_DEG;
-		else if (variant == 2)
+		else if (variant % 3 == 2)
 			facing -= TURN_DEG;
 		spot = chosen.m_vAt;
-		vector front = Vector(Math.Sin(facing * Math.DEG2RAD), 0, Math.Cos(facing * Math.DEG2RAD));
-		vector right = Vector(front[2], 0, -front[0]);
-		if (variant == 3)
-			spot = spot - right * SHIFT_M;
-		else if (variant == 4)
-			spot = spot + right * SHIFT_M;
-		else if (variant == 5)
-			spot = spot - front * SHIFT_M;
+		if (variant > 0)
+		{
+			int k = variant - 1;
+			int ring = k / 8 + 1;
+			int around = k - (k / 8) * 8;
+			float dir = around * 45 + ring * 22.5;
+			spot = spot + Vector(Math.Sin(dir * Math.DEG2RAD), 0, Math.Cos(dir * Math.DEG2RAD)) * (ring * FIELD_RING_M);
+		}
 		yaw = YawFor(facing);
-		order.m_iCandidateIndex = FIELD_INDEX - 10 * index - variant;
+		// The placement log decodes spot and variant from the index: FIELD_INDEX - 100 x spot - variant.
+		order.m_iCandidateIndex = FIELD_INDEX - 100 * index - variant;
 		Print(string.Format("[ZCR][FORTPLAN] event=try token=%1 field=1 side=%2 spot=%3 variant=%4 facing=%5 x=%6 z=%7", order.m_sToken,
 			order.m_sFaction, index, variant, Math.Round(facing), Math.Round(spot[0]), Math.Round(spot[2])) +
 			string.Format(" from_base_m=%1", Math.Round(vector.DistanceXZ(spot, order.m_vProviderPosition))), LogLevel.NORMAL);
@@ -507,8 +513,8 @@ class AICF_ZcrFortPlan
 		int index;
 		if (order.m_iCandidateIndex <= FIELD_INDEX)
 		{
-			spotIndex = (FIELD_INDEX - order.m_iCandidateIndex) / 10;
-			variant = (FIELD_INDEX - order.m_iCandidateIndex) % 10;
+			spotIndex = (FIELD_INDEX - order.m_iCandidateIndex) / 100;
+			variant = (FIELD_INDEX - order.m_iCandidateIndex) % 100;
 			array<ref AICF_ZcrFortSpot> field = s_mField.Get(order.m_sFaction);
 			if (field && spotIndex < field.Count())
 				field[spotIndex].m_bUsed = true;
