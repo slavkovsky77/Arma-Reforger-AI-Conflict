@@ -13,11 +13,22 @@ modded class AICF_EconomySystem
 	protected ref array<ref AICF_ConstructionResourceSnapshot> m_aConstructionSnapshot = {};
 	protected int m_iConstructionPropsBefore;
 
+	// ZCR (4 Nov evening, note 538): a field fortification is paid for while enemies are at its base (the base still its
+	// side's and not being captured) - the commit refused every field site with BASE_OR_PROVIDER_UNSAFE in the test, the
+	// Soviets in the town the US held. Anything else: the supply network's own rule.
+	protected bool ZcrBaseOperational(AICF_ConstructionOrder order)
+	{
+		if (order && order.m_iCandidateIndex <= AICF_ZcrFortPlan.FIELD_INDEX && order.m_Base && order.m_Base.GetOwner() &&
+			order.m_Base.IsInitialized() && order.m_Base.GetFaction() == order.m_Faction && !order.m_Base.IsBeingCaptured())
+			return true;
+		return m_SupplyNetwork.IsOperationalOwnedBase(order.m_Base, order.m_Faction);
+	}
+
 	bool QuoteConstruction(AICF_ConstructionOrder order, AICF_ConstructionConfig config)
 	{
 		if (!Replication.IsServer() || !m_Campaign || !m_Campaign.IsMaster() || !m_Campaign.IsRunning() ||
 			!order || !order.IdentityValid() || !order.m_Metadata || !order.m_Metadata.AllowsProvider(order.m_Provider) ||
-			!m_SupplyNetwork.IsOperationalOwnedBase(order.m_Base, order.m_Faction))
+			!ZcrBaseOperational(order))
 		{
 			if (order)
 				order.m_sReason = "BASE_OR_PROVIDER_UNSAFE";
