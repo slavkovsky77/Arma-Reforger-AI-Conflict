@@ -1250,6 +1250,10 @@ class AICF_ConstructionSiteSearch
 		check.m_Provider = receipt.m_Provider;
 		check.m_fMinHeight = receipt.m_fMinHeight;
 		check.m_fMaxHeight = receipt.m_fMaxHeight;
+		// ZCR (4 Nov night, note 538): a field fortification's completion is checked with its own reach (the copy had none -
+		// the first builder at a field MG nest was blocked: OUTSIDE_BUILDING_OR_WORLD_BOUNDS).
+		check.m_iCandidateIndex = receipt.m_iCandidateIndex;
+		check.m_vProviderPosition = receipt.m_vProviderPosition;
 		foreach (AICF_ConstructionVolume exitVolume : receipt.m_aExits)
 			check.m_aExits.Insert(exitVolume);
 		Math3D.MatrixCopy(transform, check.m_aTransform);
