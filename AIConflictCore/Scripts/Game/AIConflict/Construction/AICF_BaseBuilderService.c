@@ -367,7 +367,11 @@ class AICF_BaseBuilderService
 					if (other != builder && other.m_Group && other.m_Faction == faction)
 						working++;
 				}
-				if (working >= capText.ToInt())
+				// ZCR (4 Nov evening, note 538): a field fortification's builder goes past the cap - the test's field bunker at
+				// Beauregard lost its builder and waited 13 minutes for a slot the rear bases' fortifications never freed.
+				bool fieldTarget = firstTarget.m_AICFConstructionReceipt &&
+					firstTarget.m_AICFConstructionReceipt.m_iCandidateIndex <= AICF_ZcrFortPlan.FIELD_INDEX;
+				if (working >= capText.ToInt() && !fieldTarget)
 				{
 					builder.m_iRetryAtMs = now + BLOCKED_RETRY_MS;
 					return;
