@@ -869,7 +869,16 @@ class AICF_ConstructionPlanner
 	protected bool Covered(AICF_ConstructionOrder order, AICF_EConstructionType type)
 	{
 		if (type == AICF_EConstructionType.FORTIFICATION)
+		{
+			// ZCR (4 Nov night): the commit's re-check cancelled every field fortification that found its site (night battle 6:
+			// COMMIT_REVALIDATION_FAILED after 64 and 53 candidates - the base already had its 5) and held 'fortify' at the
+			// point to 5 instead of ZCR_FORTIFY_MAX. A field one stands outside the base: the base's own don't cover it.
+			if (order.m_iCandidateIndex <= AICF_ZcrFortPlan.FIELD_INDEX)
+				return false;
+			if (ZcrFortifyHere(order))
+				return Fortifications() >= ZCR_FORTIFY_MAX;
 			return Fortifications() >= FortificationsPerBase() || !AtFront(order);
+		}
 		foreach (IEntity entity : m_aInventory)
 		{
 			if (!entity)
