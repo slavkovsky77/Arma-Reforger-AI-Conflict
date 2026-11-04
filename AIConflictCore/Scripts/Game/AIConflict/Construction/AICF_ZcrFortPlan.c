@@ -469,6 +469,13 @@ class AICF_ZcrFortPlan
 		return true;
 	}
 
+	// Field tries still to make for this order (its spots x FIELD_VARIANTS).
+	static bool FieldTriesLeft(AICF_ConstructionOrder order)
+	{
+		array<int> open = s_mFieldOpen.Get(order.m_sToken);
+		return open && s_mFieldTries.Get(order.m_sToken) < open.Count() * FIELD_VARIANTS;
+	}
+
 	// How far from its provider this order may build: the provider's radius, for a field candidate out to the spot.
 	static float OrderReach(AICF_ConstructionOrder order, float radius)
 	{

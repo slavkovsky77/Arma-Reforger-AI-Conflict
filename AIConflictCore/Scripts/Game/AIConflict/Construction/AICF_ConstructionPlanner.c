@@ -518,12 +518,31 @@ class AICF_ConstructionPlanner
 			int lifetime = 60000;
 			if (order.m_aPendingCandidates[expired].m_bPathPending)
 				lifetime = 15000;
+			// ZCR (4 Nov evening, note 538): a field site's builders' path from the base runs 200-300 m through the town and
+			// took longer than 15 s - every field site that passed the checks expired while a near one inside the base won.
+			if (order.m_aPendingCandidates[expired].m_iIndex <= AICF_ZcrFortPlan.FIELD_INDEX)
+				lifetime = 90000;
 			if (order.m_aPendingCandidates[expired].m_iQueuedAt - order.m_aPendingCandidates[expired].m_iStartedAt < lifetime)
 				continue;
 			order.Log("CONSTRUCTION_PENDING_EXPIRED", "candidate_index=" + order.m_aPendingCandidates[expired].m_iIndex + " status=COMPUTE_LIMIT");
 			order.m_aPendingCandidates.Remove(expired);
 		}
-		if (order.m_iStage == 0 && !order.m_aPendingCandidates.IsEmpty())
+		// ZCR (note 538): a pending field site is resumed first, and once every field try was made no new site inside the base
+		// is started while one is pending.
+		int fieldPending = -1;
+		foreach (int pendingIndex, AICF_ConstructionCandidate pendingCandidate : order.m_aPendingCandidates)
+		{
+			if (fieldPending < 0 && pendingCandidate.m_iIndex <= AICF_ZcrFortPlan.FIELD_INDEX)
+				fieldPending = pendingIndex;
+		}
+		if (order.m_iStage == 0 && fieldPending >= 0)
+		{
+			order.m_aPendingCandidates[fieldPending].Restore(order);
+			order.m_aPendingCandidates.Remove(fieldPending);
+			order.m_iPathResumes++;
+			order.m_iPathSliceAt = order.m_iQueries;
+		}
+		else if (order.m_iStage == 0 && !order.m_aPendingCandidates.IsEmpty())
 		{
 			// FIFO между квантами: малое расстояние до endpoint за оградой
 			// не доказывает достижимость. Иначе такие пути снова забирают квоту
@@ -542,6 +561,8 @@ class AICF_ConstructionPlanner
 		}
 		while (order.m_iStage == 0 && m_iCandidatesThisTick < m_Config.m_iCandidatesPerTick && candidates++ < m_Config.m_iCandidatesPerTick && System.GetTickCount() - sliceStarted < m_Config.m_iSliceMs)
 		{
+			if (fieldPending >= 0 && !AICF_ZcrFortPlan.FieldTriesLeft(order))
+				break;
 			if (order.m_iAttempts >= order.m_iAttemptLimit)
 			{
 				if (order.m_eType != AICF_EConstructionType.SMALL_BARRACKS && (!MainDepot(order) || order.m_iAttemptLimit >= 3 * m_Config.m_iAttempts)
