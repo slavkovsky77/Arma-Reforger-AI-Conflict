@@ -753,7 +753,7 @@ class AICF_VehicleWatchdog
 	static float ZcrMaxRecoveryThreat()
 	{
 		string value;
-		if (System.GetCLIParam("aicfRecoveryMaxThreat", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfRecoveryMaxThreat", value) && !value.IsEmpty())
 			return value.ToFloat();
 		return 0.35;
 	}

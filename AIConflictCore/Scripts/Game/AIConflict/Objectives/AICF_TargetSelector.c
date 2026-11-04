@@ -38,7 +38,7 @@ class AICF_TargetSelector
 		// from the start, whatever their radio network reaches - Arleville links only to Moss Hill and Signal Hill, so the
 		// side without either never had it on its list and stayed home.
 		string onePoint;
-		if (System.GetCLIParam("zcrOnePoint", onePoint) && !onePoint.IsEmpty())
+		if (AICF_Launch.Get("zcrOnePoint", onePoint) && !onePoint.IsEmpty())
 		{
 			onePoint.Replace("_", " ");
 			for (int p; p < graph.GetNodeCount(); p++)

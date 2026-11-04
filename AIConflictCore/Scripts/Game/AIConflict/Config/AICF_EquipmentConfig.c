@@ -16,9 +16,9 @@ class AICF_EquipmentConfig
 	void AICF_EquipmentConfig()
 	{
 		string value;
-		if (System.GetCLIParam("aicfEquipmentLowPercent", value))
+		if (AICF_Launch.Get("aicfEquipmentLowPercent", value))
 			m_iLowPercent = Math.ClampInt(value.ToInt(), 1, 50);
-		if (System.GetCLIParam("aicfEquipmentSatisfiedPercent", value))
+		if (AICF_Launch.Get("aicfEquipmentSatisfiedPercent", value))
 			m_iSatisfiedPercent = Math.ClampInt(value.ToInt(), m_iLowPercent + 1, 100);
 	}
 

@@ -13,7 +13,7 @@ class AICF_DepotAccess
 
 	static bool Enabled()
 	{
-		return !System.IsCLIParam("aicfDepotNoAccess");
+		return !AICF_Launch.Has("aicfDepotNoAccess");
 	}
 
 	// 1: a road point within 'reach' can be driven to straight from 'from' ('road' = that point); 0: none can ('road' = the

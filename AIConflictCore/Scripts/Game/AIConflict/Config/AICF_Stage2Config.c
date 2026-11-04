@@ -100,30 +100,30 @@ class AICF_Stage2Config
 	protected void ApplyCLIOverrides()
 	{
 		string value;
-		if (System.GetCLIParam("aicfReliabilityIntervalMs", value))
+		if (AICF_Launch.Get("aicfReliabilityIntervalMs", value))
 			m_iReliabilityIntervalMs = ClampInt(value.ToInt(), 1000, 60000);
-		if (System.GetCLIParam("aicfOrderRecoveryRetryMs", value))
+		if (AICF_Launch.Get("aicfOrderRecoveryRetryMs", value))
 			m_iOrderRecoveryRetryMs = ClampInt(value.ToInt(), 1000, 60000);
-		if (System.GetCLIParam("aicfStuckTimeoutMs", value))
+		if (AICF_Launch.Get("aicfStuckTimeoutMs", value))
 			m_iStuckTimeoutMs = ClampInt(value.ToInt(), 30000, 3600000);
-		if (System.GetCLIParam("aicfStuckProgressMeters", value))
+		if (AICF_Launch.Get("aicfStuckProgressMeters", value))
 			m_fStuckProgressMeters = ClampFloat(value.ToFloat(), 1.0, 500.0);
-		if (System.GetCLIParam("aicfMaxStuckRecoveries", value))
+		if (AICF_Launch.Get("aicfMaxStuckRecoveries", value))
 			m_iMaxStuckRecoveries = ClampInt(value.ToInt(), 1, 100);
-		if (System.GetCLIParam("aicfObjectiveHoldTimeoutMs", value))
+		if (AICF_Launch.Get("aicfObjectiveHoldTimeoutMs", value))
 			m_iObjectiveHoldTimeoutMs = ClampInt(value.ToInt(), 30000, 1800000);
-		if (System.GetCLIParam("aicfMaxConcurrentSpawns", value))
+		if (AICF_Launch.Get("aicfMaxConcurrentSpawns", value))
 			m_iMaxConcurrentReplacementSpawns = ClampInt(value.ToInt(), 1, 8);
-		if (System.GetCLIParam("aicfStuckWatchdog", value))
+		if (AICF_Launch.Get("aicfStuckWatchdog", value))
 			m_bStuckWatchdogEnabled = value.ToInt() > 0;
-		if (System.GetCLIParam("aicfTestDropOrderFaction", value))
+		if (AICF_Launch.Get("aicfTestDropOrderFaction", value))
 		{
 			if (value == "US" || value == "USSR")
 				m_sTestDropOrderFaction = value;
 		}
-		if (System.GetCLIParam("aicfTestDropOrderSlot", value))
+		if (AICF_Launch.Get("aicfTestDropOrderSlot", value))
 			m_iTestDropOrderSlot = ClampInt(value.ToInt(), -1, AICF_Stage1Config.GROUP_SLOTS_PER_FACTION - 1);
-		if (System.GetCLIParam("aicfTestDropOrderAtMs", value))
+		if (AICF_Launch.Get("aicfTestDropOrderAtMs", value))
 			m_iTestDropOrderAtMs = ClampInt(value.ToInt(), 5000, 3600000);
 	}
 

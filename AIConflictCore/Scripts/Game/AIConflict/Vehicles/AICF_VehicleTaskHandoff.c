@@ -226,7 +226,7 @@ class AICF_VehicleTaskHandoff
 		if (!handoffState.BeginOrderRestoreRequest())
 		{
 			// ZCR (2 Nov, note 504): budget spent, still no order - one more attempt a minute. -aicfNoRestoreRearm off.
-			if (System.IsCLIParam("aicfNoRestoreRearm") || !handoffState.ZcrRearmRestore(requestedAtMs, 60000) ||
+			if (AICF_Launch.Has("aicfNoRestoreRearm") || !handoffState.ZcrRearmRestore(requestedAtMs, 60000) ||
 				!handoffState.BeginOrderRestoreRequest())
 				return false;
 			if (slot)
@@ -308,7 +308,7 @@ class AICF_VehicleTaskHandoff
 		// ZCR (2 Nov, note 502): the rebuilt order wanted a false-completion route leg from where the team stood and no leg
 		// was found (FALSE_COMPLETION_ROUTE_ENDPOINT_UNAVAILABLE) - the restore was rejected every second and the team
 		// stood with no order for 20-25 min. Forget the leg and give the order for the base itself. -aicfNoLegReset off.
-		if (!plannerAccepted && slot.GetFalseCompletionEndpointRevision() > 0 && !System.IsCLIParam("aicfNoLegReset"))
+		if (!plannerAccepted && slot.GetFalseCompletionEndpointRevision() > 0 && !AICF_Launch.Has("aicfNoLegReset"))
 		{
 			slot.ResetFalseCompletionRecovery();
 			plannerAccepted = m_OrderPlanner.RebuildCurrentOrder(slot, faction, reason);
@@ -318,7 +318,7 @@ class AICF_VehicleTaskHandoff
 		// ZCR (2 Nov, note 504): the team's stuck verdict from before the ride (the route recovery exhausted, the field hold)
 		// refused every restore - 10 of 10 rejections in the night's 12 runs, a team then stood 10-26 min. The ride moved
 		// the team; forget the verdict and rebuild. -aicfNoStuckReset off.
-		if (!plannerAccepted && !System.IsCLIParam("aicfNoStuckReset") && (slot.GetRouteRecoveryEpisode().IsBlocked(slot) ||
+		if (!plannerAccepted && !AICF_Launch.Has("aicfNoStuckReset") && (slot.GetRouteRecoveryEpisode().IsBlocked(slot) ||
 			slot.IsPersistentStuckFieldHold() || slot.IsTemporaryRouteReplanHold()))
 		{
 			string zcrWas = m_OrderPlanner.ZcrRebuildBlocker(slot, faction);

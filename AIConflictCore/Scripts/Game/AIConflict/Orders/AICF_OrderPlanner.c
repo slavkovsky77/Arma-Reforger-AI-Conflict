@@ -2711,7 +2711,7 @@ class AICF_OrderPlanner
 			if (endpointResolved)
 			{
 				targetPosition = recoveryEndpoint;
-				zcrDefendLeg = role != AICF_EGroupRole.ATTACK && !System.IsCLIParam("aicfDefendLegHold") &&
+				zcrDefendLeg = role != AICF_EGroupRole.ATTACK && !AICF_Launch.Has("aicfDefendLegHold") &&
 					vector.DistanceXZ(recoveryEndpoint, zcrObjective) > DEFEND_RADIUS_METERS;
 				if (zcrDefendLeg)
 					waypointPrefab = ATTACK_OPERATIONAL_WAYPOINT_PREFAB;

@@ -29,7 +29,7 @@ class AICF_VictorySystem
 			return false;
 		// ZCR (31 Oct, the transport integration test): -aicfNoVictory - nobody wins; one side holding every base
 		// (-zcrAllBasesTo) ended the match in a second ("all objectives uncontested") and it restarted all neutral.
-		if (System.IsCLIParam("aicfNoVictory"))
+		if (AICF_Launch.Has("aicfNoVictory"))
 			return false;
 
 		if (!usState || !ussrState)

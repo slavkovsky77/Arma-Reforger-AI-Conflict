@@ -110,7 +110,7 @@ class AICF_LogisticsService
 	// ZCR: automatic dispatch on unless -aicfLogisticsManualOnly.
 	static bool AutomaticDispatch()
 	{
-		return !System.IsCLIParam("aicfLogisticsManualOnly");
+		return !AICF_Launch.Has("aicfLogisticsManualOnly");
 	}
 
 	// The automatic scheduler as it was before manual dispatch (upstream 2a00451^): spawn a truck for a
@@ -121,7 +121,7 @@ class AICF_LogisticsService
 	static int SideTrucks()
 	{
 		string value;
-		if (System.GetCLIParam("aicfLogisticsSideTrucks", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfLogisticsSideTrucks", value) && !value.IsEmpty())
 			return Math.Max(0, value.ToInt());
 		return 8;
 	}

@@ -904,10 +904,10 @@ class AICF_VehicleCoordinator
 	protected static int ZcrRideCooldownMs()
 	{
 		string value;
-		if (System.GetCLIParam("aicfRideCooldownMs", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfRideCooldownMs", value) && !value.IsEmpty())
 			return Math.Max(0, value.ToInt());
 		float speed = 1;
-		if (System.GetCLIParam("zcrSpeed", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("zcrSpeed", value) && !value.IsEmpty())
 			speed = Math.Max(1, value.ToFloat());
 		return 180000 / speed;
 	}
@@ -923,10 +923,10 @@ class AICF_VehicleCoordinator
 	protected static int ZcrBaseFailWaitMs()
 	{
 		string value;
-		if (System.GetCLIParam("aicfBaseFailWaitMs", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfBaseFailWaitMs", value) && !value.IsEmpty())
 			return Math.Max(0, value.ToInt());
 		float speed = 1;
-		if (System.GetCLIParam("zcrSpeed", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("zcrSpeed", value) && !value.IsEmpty())
 			speed = Math.Max(1, value.ToFloat());
 		return 20000 / speed;
 	}
@@ -939,7 +939,7 @@ class AICF_VehicleCoordinator
 		// ZCR (1 Nov, note 485): a ride that delivered its team but whose drop-off ran out of time (one soldier slow to get
 		// out) is no request-fail loop - 6 of 8 failed rides in the watched transport run, and each team then walked its
 		// next trip (1.2-2.1 km; 5 of the run's 7 long trips on foot). No cooldown for it; -aicfDropoffCooldown as before.
-		if (why == "DISEMBARK_TIMEOUT" && !System.IsCLIParam("aicfDropoffCooldown"))
+		if (why == "DISEMBARK_TIMEOUT" && !AICF_Launch.Has("aicfDropoffCooldown"))
 			return;
 		string key = faction + ":" + slotId;
 		int now = System.GetTickCount();
@@ -964,7 +964,7 @@ class AICF_VehicleCoordinator
 	static float ZcrRideFromBaseMeters()
 	{
 		string value;
-		if (System.GetCLIParam("aicfRideFromBaseMeters", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfRideFromBaseMeters", value) && !value.IsEmpty())
 			return Math.Max(0, value.ToFloat());
 		return 250;
 	}
@@ -985,7 +985,7 @@ class AICF_VehicleCoordinator
 	static float ZcrRideDetourMeters()
 	{
 		string value;
-		if (System.GetCLIParam("aicfRideDetourMeters", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfRideDetourMeters", value) && !value.IsEmpty())
 			return Math.Max(0, value.ToFloat());
 		return 500;
 	}
@@ -1027,7 +1027,7 @@ class AICF_VehicleCoordinator
 	static int ZcrRideSpacingMs()
 	{
 		string value;
-		if (System.GetCLIParam("aicfRideSpacingMs", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfRideSpacingMs", value) && !value.IsEmpty())
 			return Math.Max(0, value.ToInt());
 		// Off by default (1 Nov, note 482-484): 4 Farm battles with it v 5 without - rides delivered 30% v 41%, failed at
 		// the HQ 18% v 7%; teams queued at the HQ and walked.
@@ -1068,7 +1068,7 @@ class AICF_VehicleCoordinator
 	static int ZcrRidesPerBase()
 	{
 		string value;
-		if (System.GetCLIParam("aicfRidesPerBase", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfRidesPerBase", value) && !value.IsEmpty())
 			return Math.Max(0, value.ToInt());
 		return 0;
 	}

@@ -179,7 +179,7 @@ modded class SCR_AIProcessFailedMovementResult
 		if (sim)
 			gear = sim.GearboxGetEfficiencyState();
 		bool held = gear >= 0 && gear < 0.001 && result != EMoveError.ENTITY_CANT_MOVE &&
-			SCR_AIVehicleUsability.VehicleCanMove(vehicle) && !System.IsCLIParam("zcrNoHeldStay");
+			SCR_AIVehicleUsability.VehicleCanMove(vehicle) && !AICF_Launch.Has("zcrNoHeldStay");
 		if (!m_bZcrVehMoveLogged)
 		{
 			m_bZcrVehMoveLogged = true;

@@ -61,7 +61,7 @@ modded class AICF_EconomySystem
 		// in 14 of 16 matches, so no supply truck). Building drains the front; the trucks refill it.
 		// -aicfFullConstructionReserve keeps the reserve.
 		if ((order.m_eType == AICF_EConstructionType.LIGHT_DEPOT || order.m_eType == AICF_EConstructionType.FORTIFICATION)
-			&& !System.IsCLIParam("aicfFullConstructionReserve"))
+			&& !AICF_Launch.Has("aicfFullConstructionReserve"))
 			order.m_iReserve = 0;
 		if (m_SupplyNetwork.IsSupplySource(order.m_Base, order.m_Faction))
 			order.m_iReserve = Math.Max(order.m_iReserve, m_Config.GetSourceReserveSupplies());

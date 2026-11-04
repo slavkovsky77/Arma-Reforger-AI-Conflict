@@ -1133,7 +1133,7 @@ class AICF_VehicleBoardingFlow
 		if (!state || state.GetPhase() == AICF_EVehicleBoardingPhase.APPROACH)
 			return threshold;
 		string value;
-		if (!System.GetCLIParam("aicfWalkOverMeters", value) || value.IsEmpty())
+		if (!AICF_Launch.Get("aicfWalkOverMeters", value) || value.IsEmpty())
 			value = "12";
 		float meters = value.ToFloat();
 		if (meters <= 0)
@@ -2450,7 +2450,7 @@ class AICF_VehicleBoardingFlow
 	// with -aicfVehiclePassengerBoardingTimeoutMs).
 	protected static bool ZcrOneByOne()
 	{
-		return System.IsCLIParam("aicfBoardOneByOne");
+		return AICF_Launch.Has("aicfBoardOneByOne");
 	}
 
 	protected bool ZcrPassengerStillBoarding(AICF_VehicleBoardingState state, AICF_VehicleLease lease)
@@ -2560,7 +2560,7 @@ class AICF_VehicleBoardingFlow
 				}
 				// ZCR (22 Oct, lab): -aicfNoHiddenSeat - no forced teleport into the seat; the passenger waits for the phase
 				// deadline as when a player is near. A forced seat came in the 10 s before 2 of 12 watched crashes (lift 3.4).
-				if (System.IsCLIParam("aicfNoHiddenSeat"))
+				if (AICF_Launch.Has("aicfNoHiddenSeat"))
 				{
 					if (token.RecordRecoveryFence("LAB_DISABLED"))
 						AICF_Stage3Diagnostics.Info("PASSENGER_HIDDEN_EXACT_CARGO_DEFERRED",
@@ -2667,7 +2667,7 @@ class AICF_VehicleBoardingFlow
 				// after the last retry also gets the seat; before, only a stalled one did, and a soldier whose order
 				// failed 2 m from the door stood idle until the boarding deadline sank the whole ride (9 of 40
 				// boarding timeouts in 39 transport runs). -aicfNoFailedSeat: as before.
-				bool zcrFailedSeat = actionTerminal && !System.IsCLIParam("aicfNoFailedSeat");
+				bool zcrFailedSeat = actionTerminal && !AICF_Launch.Has("aicfNoFailedSeat");
 				if ((runningStalled || animatedRecoveryExpired || trackedRetryOrphaned || zcrFailedSeat) &&
 					token.ScheduleHiddenExactSeatRecovery())
 				{

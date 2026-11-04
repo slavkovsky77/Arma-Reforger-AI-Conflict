@@ -16,7 +16,7 @@ class AICF_BaseRegen
 
 	static void Start()
 	{
-		if (!Replication.IsServer() || System.IsCLIParam("aicfBaseRegen"))
+		if (!Replication.IsServer() || AICF_Launch.Has("aicfBaseRegen"))
 			return;
 		GetGame().GetCallqueue().CallLater(Tick, 5000, true);
 	}

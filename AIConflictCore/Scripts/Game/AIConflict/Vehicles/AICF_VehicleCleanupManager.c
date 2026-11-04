@@ -2076,7 +2076,7 @@ class AICF_VehicleCleanupManager
 
 	protected static bool OnRoad(Vehicle vehicle)
 	{
-		if (!vehicle || System.IsCLIParam("aicfKeepRoadVehicles"))
+		if (!vehicle || AICF_Launch.Has("aicfKeepRoadVehicles"))
 			return false;
 		SCR_AIWorld aiWorld = SCR_AIWorld.Cast(GetGame().GetAIWorld());
 		if (!aiWorld)

@@ -10,7 +10,7 @@ class AICF_BaseStorage
 
 	static void Start()
 	{
-		if (!Replication.IsServer() || System.IsCLIParam("aicfNoBaseStorage"))
+		if (!Replication.IsServer() || AICF_Launch.Has("aicfNoBaseStorage"))
 			return;
 		GetGame().GetCallqueue().CallLater(Place, 4000, false);
 	}
@@ -42,7 +42,7 @@ class AICF_BaseStorage
 			// side's cache, the other side's trucks were refused (RESOURCE_OPERATION_UNSUPPORTED_OR_REJECTED)
 			// once the base changed hands. -aicfFactionBaseStorage: the owner's Conflict cache.
 			ResourceName prefab = "{47789BA6E9CA2928}Prefabs/MP/Campaign/SupplyDepots/SupplyCache_S_FIA_03_Campaign.et";
-			if (System.IsCLIParam("aicfFactionBaseStorage"))
+			if (AICF_Launch.Has("aicfFactionBaseStorage"))
 			{
 				prefab = "{94D9E9B690F98756}PrefabsEditable/Auto/Compositions/Slotted/SlotFlatSmall/E_SupplyCache_S_US_01.et";
 				if (base.GetFaction() && base.GetFaction().GetFactionKey() == "USSR")
@@ -69,7 +69,7 @@ class AICF_BaseStorage
 	static int StartStock()
 	{
 		string value;
-		if (System.GetCLIParam("aicfBaseStorageStock", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfBaseStorageStock", value) && !value.IsEmpty())
 			return value.ToInt();
 		return 1000;
 	}

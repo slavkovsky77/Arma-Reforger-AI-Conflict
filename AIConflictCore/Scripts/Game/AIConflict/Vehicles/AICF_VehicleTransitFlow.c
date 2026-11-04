@@ -309,10 +309,10 @@ class AICF_VehicleTransitFlow
 	protected static int ZcrDepartMs(string param, int defaultMs)
 	{
 		string value;
-		if (System.GetCLIParam(param, value) && !value.IsEmpty())
+		if (AICF_Launch.Get(param, value) && !value.IsEmpty())
 			return Math.Max(0, value.ToInt());
 		float speed = 1;
-		if (System.GetCLIParam("zcrSpeed", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("zcrSpeed", value) && !value.IsEmpty())
 			speed = Math.Max(1, value.ToFloat());
 		return defaultMs / speed;
 	}
@@ -408,7 +408,7 @@ class AICF_VehicleTransitFlow
 		{
 			s_fZcrContactM = 800;
 			string value;
-			if (System.GetCLIParam("aicfContactDismountM", value) && !value.IsEmpty())
+			if (AICF_Launch.Get("aicfContactDismountM", value) && !value.IsEmpty())
 				s_fZcrContactM = Math.Max(0, value.ToFloat());
 		}
 		if (s_fZcrContactM <= 0 || !trip || !state || !trip.GetLease() || !trip.GetAssignment() || !trip.GetAssignment().GetGroup())

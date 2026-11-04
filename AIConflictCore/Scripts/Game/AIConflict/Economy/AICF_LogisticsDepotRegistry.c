@@ -373,7 +373,7 @@ class AICF_LogisticsDepotRegistry
 	static int TrucksPerDepot()
 	{
 		string value;
-		if (System.GetCLIParam("aicfLogisticsTrucksPerDepot", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfLogisticsTrucksPerDepot", value) && !value.IsEmpty())
 			return Math.ClampInt(value.ToInt(), 1, 6);
 		return 3;
 	}

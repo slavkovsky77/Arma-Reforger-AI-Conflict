@@ -275,7 +275,7 @@ class AICF_ConstructionSiteSearch
 		// 22 Oct night: every order, not only the first - the retries went back to random spots and 39% of their
 		// rejections were DEPOT_FAR_FROM_ROAD (light depots: 147 searches gave up, 79 placed). A retry starts further
 		// along the roadside list (by the search offset the failed ones left).
-		if (order.m_iRoadTries >= ROAD_TRIES || System.IsCLIParam("aicfDepotAnyRoad"))
+		if (order.m_iRoadTries >= ROAD_TRIES || AICF_Launch.Has("aicfDepotAnyRoad"))
 			return false;
 		if (!order.m_aRoadSeeds)
 			BuildRoadSeeds(order, extent, outer);
@@ -1063,7 +1063,7 @@ class AICF_ConstructionSiteSearch
 	// depot: with only roads 3 m wide counted, a 12-min test placed one depot (FAR_FROM_ROAD up to 238 per search).
 	protected bool DepotRoadsOk(AICF_ConstructionOrder order, ChimeraAIWorld aiWorld)
 	{
-		if (System.IsCLIParam("aicfDepotAnyRoad"))
+		if (AICF_Launch.Has("aicfDepotAnyRoad"))
 			return true;
 		bool needNear = !order.m_bForcedSmallBarracks;
 		vector center = order.m_aTransform[3];

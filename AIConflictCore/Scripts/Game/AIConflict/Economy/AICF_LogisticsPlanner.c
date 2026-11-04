@@ -280,7 +280,7 @@ class AICF_LogisticsPlanner
 
 	protected vector Spread(AICF_LogisticsEndpoint e, vector point)
 	{
-		if (System.IsCLIParam("aicfLogisticsNoSpread") || !e || !e.IdentityValid())
+		if (AICF_Launch.Has("aicfLogisticsNoSpread") || !e || !e.IdentityValid())
 			return point;
 		array<vector> taken = {};
 		foreach (AICF_LogisticsJob job : m_Book.m_aJobs)
@@ -352,7 +352,7 @@ class AICF_LogisticsPlanner
 	// trucks hardly ever left. -aicfLogisticsStrictRoute: inside the radius only.
 	static float EdgeMarginM()
 	{
-		if (System.IsCLIParam("aicfLogisticsStrictRoute"))
+		if (AICF_Launch.Has("aicfLogisticsStrictRoute"))
 			return 0;
 		return 100;     // Arland's Airport Base: the nearest road 233 m from its centre (radius 150) - the airfield isn't road
 	}

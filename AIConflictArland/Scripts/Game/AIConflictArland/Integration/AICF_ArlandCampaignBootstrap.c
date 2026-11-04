@@ -18,7 +18,7 @@ modded class SCR_GameModeCampaign
 		super.OnGameStart();
 		// -aicfOff (lab): stock Conflict only - the bases and their supply caches with no AI armies, for the driving test
 		// track (22 Oct: the Moss Hill trap needs the Conflict base layer; with AI Conflict on, its war ran round the track).
-		if (System.IsCLIParam("aicfOff"))
+		if (AICF_Launch.Has("aicfOff"))
 			return;
 
 		m_sAICFMapKey = AICF_ResolveSupportedMapKey();

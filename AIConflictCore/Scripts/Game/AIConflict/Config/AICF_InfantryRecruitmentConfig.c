@@ -27,13 +27,13 @@ class AICF_InfantryRecruitmentConfig
 	void AICF_InfantryRecruitmentConfig()
 	{
 		string value;
-		if (System.GetCLIParam("aicfRecruitRiflemanCost", value))
+		if (AICF_Launch.Get("aicfRecruitRiflemanCost", value))
 			m_iRiflemanCost = Math.ClampInt(value.ToInt(), 1, 1000);
-		if (System.GetCLIParam("aicfRecruitMedicCost", value))
+		if (AICF_Launch.Get("aicfRecruitMedicCost", value))
 			m_iMedicCost = Math.ClampInt(value.ToInt(), 1, 1000);
-		if (System.GetCLIParam("aicfRecruitGrenadierCost", value))
+		if (AICF_Launch.Get("aicfRecruitGrenadierCost", value))
 			m_iGrenadierCost = Math.ClampInt(value.ToInt(), 1, 1000);
-		if (System.GetCLIParam("aicfRecruitSpecialistCost", value))
+		if (AICF_Launch.Get("aicfRecruitSpecialistCost", value))
 			m_iSpecialistCost = Math.ClampInt(value.ToInt(), 1, 1000);
 	}
 
@@ -41,7 +41,7 @@ class AICF_InfantryRecruitmentConfig
 	static float AttackRecruitMeters()
 	{
 		string value;
-		if (System.GetCLIParam("aicfAttackRecruitMeters", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfAttackRecruitMeters", value) && !value.IsEmpty())
 			return Math.Clamp(value.ToFloat(), 0, MAX_DISTANCE_METERS);
 		return 150;
 	}

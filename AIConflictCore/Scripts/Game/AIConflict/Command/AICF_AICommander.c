@@ -78,7 +78,7 @@ class AICF_AICommander
 	{
 		if (!IsEnabled())
 			return null;
-		if (!m_PathGroup && m_iPathGroupTries < 3 && m_Faction && m_Faction.GetMainBase() && !System.IsCLIParam("aicfBorrowedPathfinding"))
+		if (!m_PathGroup && m_iPathGroupTries < 3 && m_Faction && m_Faction.GetMainBase() && !AICF_Launch.Has("aicfBorrowedPathfinding"))
 		{
 			m_iPathGroupTries++;
 			Resource res = Resource.Load("{000CD338713F2B5A}Prefabs/AI/Groups/Group_Base.et");

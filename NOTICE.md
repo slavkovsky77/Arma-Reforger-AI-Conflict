@@ -1,0 +1,96 @@
+# NOTICE - AI Conflict, Zeus Commander edition
+
+This is a modified version of **Arma Reforger AI Conflict** by **Ishafel** and its contributors,
+https://github.com/Ishafel/Arma-Reforger-AI-Conflict, licensed under the Apache License, Version 2.0 (LICENSE /
+license.txt next to this file). The original copyright and licence notices are kept unchanged.
+
+Modified by slavkovsky77 for Zeus Commander Reforger, from 19 October 2026, on top of AI Conflict as of
+17 October 2026 (commit 8a790b7, after release 0.1.29). This edition is not made or endorsed by Ishafel. It uses its own
+addon GUIDs (Core CF39E4A7CCBBF845, Arland ACAA98B674F022BB) and must not be loaded together with the original AI
+Conflict.
+
+What changed, in short: launch parameters for Zeus Commander's commander (squads per side, fireteam size, the one-point
+battle), attack plans and live plans per team (routes through cover, drop points, wait/go), a second wave from the
+home-defence teams, soldiers stuck in rocks freed, rides that wait for their team and leave a base one at a time,
+contact dismounts near the target, the one-point capture rule for both sides, fortifications first at a held point,
+a depot way-out check spread over frames, a scenario's own launch parameters (AICF_Launch, m_sAICFLaunchParams).
+Changes inside existing files are marked in comments ("ZCR, <date>").
+
+## Files changed (M) or added (A) since the fork point
+- M `AIConflictArland/Scripts/Game/AIConflictArland/Integration/AICF_ArlandCampaignBootstrap.c`
+- M `AIConflictArland/addon.gproj`
+- M `AIConflictCore/Scripts/Game/AIConflict/Bootstrap/AICF_MatchController.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Command/AICF_AICommander.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Command/AICF_AdaptiveCommanderPolicy.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Command/AICF_AdaptiveScore.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Config/AICF_ConstructionConfig.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Config/AICF_EquipmentConfig.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Config/AICF_InfantryRecruitmentConfig.c`
+- A `AIConflictCore/Scripts/Game/AIConflict/Config/AICF_Launch.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Config/AICF_LogisticsConfig.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Config/AICF_Stage1Config.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Config/AICF_Stage2Config.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Config/AICF_Stage3Config.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Config/AICF_Stage4Config.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Construction/AICF_BaseBuilderService.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Construction/AICF_ConstructionMetadata.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Construction/AICF_ConstructionOrder.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Construction/AICF_ConstructionPlanner.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Construction/AICF_ConstructionSiteSearch.c`
+- A `AIConflictCore/Scripts/Game/AIConflict/Construction/AICF_DepotAccess.c`
+- A `AIConflictCore/Scripts/Game/AIConflict/Construction/AICF_Fortifications.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Construction/AICF_SmallBarracksFallback.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Construction/AICF_StockConstructionAdapter.c`
+- A `AIConflictCore/Scripts/Game/AIConflict/Construction/AICF_ZcrFortPlan.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Content/AICF_ContentProfile.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Economy/AICF_ConstructionEconomy.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Economy/AICF_LogisticsDepotRegistry.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Economy/AICF_LogisticsJob.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Economy/AICF_LogisticsLedger.c`
+- A `AIConflictCore/Scripts/Game/AIConflict/Economy/AICF_LogisticsLookup.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Economy/AICF_LogisticsPlanner.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Economy/AICF_LogisticsService.c`
+- A `AIConflictCore/Scripts/Game/AIConflict/Economy/AICF_SupplyDepots.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Economy/AICF_SupplyNetwork.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Forces/AICF_AINodeLifecycle.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Forces/AICF_FIAGarrisonCrew.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Forces/AICF_GroupCohesionPolicy.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Forces/AICF_GroupSpawner.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Forces/AICF_InfantryRecruitmentService.c`
+- A `AIConflictCore/Scripts/Game/AIConflict/Forces/AICF_ZcrUnstick.c`
+- A `AIConflictCore/Scripts/Game/AIConflict/Integration/AICF_BaseRegen.c`
+- A `AIConflictCore/Scripts/Game/AIConflict/Integration/AICF_BaseStorage.c`
+- A `AIConflictCore/Scripts/Game/AIConflict/Integration/AICF_NavmeshBuild.c`
+- A `AIConflictCore/Scripts/Game/AIConflict/Integration/AICF_RadioRange.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Loadouts/AICF_EquipmentService.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Objectives/AICF_TargetSelector.c`
+- A `AIConflictCore/Scripts/Game/AIConflict/Orders/AICF_BuildingAnchor.c`
+- A `AIConflictCore/Scripts/Game/AIConflict/Orders/AICF_DangerZones.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Orders/AICF_InfantryApproachRoute.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Orders/AICF_OrderPlanner.c`
+- A `AIConflictCore/Scripts/Game/AIConflict/Orders/AICF_ZcrAttackPlan.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/State/AICF_FactionState.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/State/AICF_GroupSlot.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/State/AICF_RouteRecoveryEpisode.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/State/Vehicles/AICF_FactionFleet.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/State/Vehicles/AICF_TransportTripRegistry.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/State/Vehicles/AICF_VehicleBoardingTokens.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/State/Vehicles/AICF_VehiclePhaseStates.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_FIAGarrisonService.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_FIAPatrolService.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_LogisticsRouteRecovery.c`
+- A `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_RoadGraph.c`
+- A `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_RoadMines.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_VehicleAcquisitionFlow.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_VehicleBoardingFlow.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_VehicleCatalog.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_VehicleCleanupManager.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_VehicleCoordinator.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_VehicleDismountFlow.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_VehicleSpawner.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_VehicleTaskHandoff.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_VehicleTransitFlow.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_VehicleWatchdog.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_VehicleWaypointFactory.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Victory/AICF_VictorySystem.c`
+- M `AIConflictCore/addon.gproj`

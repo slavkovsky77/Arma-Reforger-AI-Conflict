@@ -76,7 +76,7 @@ class AICF_FIAPatrolService
 	{
 		if (!Replication.IsServer() || m_bStopped || !m_Graph || !m_Fleet) return;
 		// ZCR, 29 Oct: the one-point sub-lab (-zcrOnePoint) keeps every base but the two HQs neutral and empty - no FIA patrols.
-		if (System.IsCLIParam("zcrOnePoint")) return;
+		if (AICF_Launch.Has("zcrOnePoint")) return;
 		int now = System.GetTickCount();
 		foreach (AICF_FIAPatrol p : m_aPatrols)
 		{

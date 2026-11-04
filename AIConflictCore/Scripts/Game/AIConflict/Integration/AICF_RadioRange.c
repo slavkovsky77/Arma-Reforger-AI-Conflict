@@ -19,7 +19,7 @@ class AICF_RadioRange
 	{
 		float range;
 		string value;
-		if (System.GetCLIParam("aicfRadioRange", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfRadioRange", value) && !value.IsEmpty())
 			range = value.ToFloat();
 		else if (mapKey == "Yunakivka")
 			range = 3000;

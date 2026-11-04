@@ -356,7 +356,7 @@ class AICF_BaseBuilderService
 			// Builders per side at most (-aicfMaxBuildersPerFaction; ZCR lab 24 Oct: on Everon a builder at every base with
 			// work - 59 builder characters in a match, on top of the 50-a-side squads - FPS 20).
 			string capText;
-			if (System.GetCLIParam("aicfMaxBuildersPerFaction", capText) && capText.ToInt() > 0)
+			if (AICF_Launch.Get("aicfMaxBuildersPerFaction", capText) && capText.ToInt() > 0)
 			{
 				int working;
 				foreach (AICF_BaseBuilder other : m_aBuilders)

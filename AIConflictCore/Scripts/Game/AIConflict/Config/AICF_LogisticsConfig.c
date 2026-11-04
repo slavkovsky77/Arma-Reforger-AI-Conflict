@@ -105,7 +105,7 @@ class AICF_LogisticsConfig
 	protected void ReadFloat(string key, inout float value)
 	{
 		string text;
-		if (!System.GetCLIParam("aicfLogistics" + key, text)) return;
+		if (!AICF_Launch.Get("aicfLogistics" + key, text)) return;
 		float parsed;
 		if (!Decimal(text, false, parsed))
 			m_sError = "aicfLogistics" + key + " requires a finite nonnegative decimal";
@@ -116,7 +116,7 @@ class AICF_LogisticsConfig
 	protected void ReadInt(string key, inout int value)
 	{
 		string text;
-		if (!System.GetCLIParam("aicfLogistics" + key, text)) return;
+		if (!AICF_Launch.Get("aicfLogistics" + key, text)) return;
 		float parsed;
 		if (!Decimal(text, true, parsed))
 			m_sError = "aicfLogistics" + key + " requires a nonnegative integer";
@@ -148,7 +148,7 @@ class AICF_LogisticsConfig
 		foreach (string key : obsolete)
 		{
 			string ignored;
-			if (System.GetCLIParam(key, ignored)) AICF_Stage4Diagnostics.Warning("LOGISTICS_CONFIG_DEPRECATED", "option=" + key + " ignored=1 replacement=aicfLogistics_config");
+			if (AICF_Launch.Get(key, ignored)) AICF_Stage4Diagnostics.Warning("LOGISTICS_CONFIG_DEPRECATED", "option=" + key + " ignored=1 replacement=aicfLogistics_config");
 		}
 		string details = string.Format("schema_version=2 request_below_percent=%1 target_percent=%2 donate_above_percent=%3 donor_keep_percent=%4 neutral_reserve=%5 owned_reserve=%6 min_dispatch=%7 max_cargo=%8 workers_per_depot=%9",
 			m_fRequestBelowPercent, m_fTargetPercent, m_fDonateAbovePercent, m_fDonorKeepPercent, m_fNeutralSourceReserveSupplies,

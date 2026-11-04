@@ -22,7 +22,7 @@ class AICF_NavmeshBuild
 		// Opt-in (-aicfNavmeshBuild): the 21 Oct test on Yunakivka invalidated the tiles near the bases and
 		// generated none (0 of 16 base centres with a tile after 10 min, nobody left the main bases) - the
 		// rebuild only refreshes existing navmesh. A navmesh has to be generated offline (Workbench).
-		if (!Replication.IsServer() || !System.IsCLIParam("aicfNavmeshBuild"))
+		if (!Replication.IsServer() || !AICF_Launch.Has("aicfNavmeshBuild"))
 			return;
 		GetGame().GetCallqueue().CallLater(Begin, 5000, false);
 	}

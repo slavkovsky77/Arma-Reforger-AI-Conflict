@@ -88,23 +88,23 @@ class AICF_Stage4Config
 	protected void ApplyCLIOverrides()
 	{
 		string value;
-		if (System.GetCLIParam("aicfReplacementSupplyCost", value))
+		if (AICF_Launch.Get("aicfReplacementSupplyCost", value))
 			m_iReplacementSupplyCost = ClampInt(value.ToInt(), 1, 1000000);
-		if (System.GetCLIParam("aicfEconomyHealthyStockGroups", value))
+		if (AICF_Launch.Get("aicfEconomyHealthyStockGroups", value))
 			m_iHealthyStockGroups = ClampInt(value.ToInt(), 2, 100);
-		if (System.GetCLIParam("aicfEconomyHealthyPacePercent", value))
+		if (AICF_Launch.Get("aicfEconomyHealthyPacePercent", value))
 			m_iHealthyPacePercent = ClampInt(value.ToInt(), 1, 400);
-		if (System.GetCLIParam("aicfEconomyStrainedPacePercent", value))
+		if (AICF_Launch.Get("aicfEconomyStrainedPacePercent", value))
 			m_iStrainedPacePercent = ClampInt(value.ToInt(), 1, 100);
-		if (System.GetCLIParam("aicfEconomyIsolatedPacePercent", value))
+		if (AICF_Launch.Get("aicfEconomyIsolatedPacePercent", value))
 			m_iIsolatedPacePercent = ClampInt(value.ToInt(), 1, 100);
-		if (System.GetCLIParam("aicfEconomyBlockedPacePercent", value))
+		if (AICF_Launch.Get("aicfEconomyBlockedPacePercent", value))
 			m_iBlockedPacePercent = ClampInt(value.ToInt(), 0, 100);
-		if (System.GetCLIParam("aicfEconomyRetryMs", value))
+		if (AICF_Launch.Get("aicfEconomyRetryMs", value))
 			m_iRetryIntervalMs = ClampInt(value.ToInt(), 1000, 600000);
-		if (System.GetCLIParam("aicfSupplySourceReserveGroups", value))
+		if (AICF_Launch.Get("aicfSupplySourceReserveGroups", value))
 			m_iSourceReserveGroups = ClampInt(value.ToInt(), 0, 100);
-		if (System.GetCLIParam("aicfEconomyHeartbeatMs", value))
+		if (AICF_Launch.Get("aicfEconomyHeartbeatMs", value))
 			m_iHeartbeatIntervalMs = ClampInt(value.ToInt(), 5000, 600000);
 	}
 

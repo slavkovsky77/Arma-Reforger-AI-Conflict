@@ -48,7 +48,7 @@ class AICF_Stage1Config
 	static float InfantryRideMeters()
 	{
 		string value;
-		if (System.GetCLIParam("aicfInfantryRideMeters", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfInfantryRideMeters", value) && !value.IsEmpty())
 			return Math.Clamp(value.ToFloat(), 300, 5000);
 		return 300;
 	}
@@ -56,7 +56,7 @@ class AICF_Stage1Config
 	protected static int CliGroupSize(string name, int fallback)
 	{
 		string value;
-		if (System.GetCLIParam(name, value) && !value.IsEmpty())
+		if (AICF_Launch.Get(name, value) && !value.IsEmpty())
 			return Math.ClampInt(value.ToInt(), MIN_GROUP_SIZE, MAX_GROUP_SIZE);
 		return fallback;
 	}
@@ -89,7 +89,7 @@ class AICF_Stage1Config
 		{
 			s_iSquadsPerSide = GROUP_SLOTS_PER_FACTION;
 			string value;
-			if (System.GetCLIParam("aicfSquadsPerSide", value) && value.ToInt() > 0)
+			if (AICF_Launch.Get("aicfSquadsPerSide", value) && value.ToInt() > 0)
 				s_iSquadsPerSide = Math.ClampInt(value.ToInt(), 2, GROUP_SLOTS_PER_FACTION);
 		}
 		return s_iSquadsPerSide;
@@ -100,7 +100,7 @@ class AICF_Stage1Config
 	static int SquadsFor(FactionKey factionKey)
 	{
 		string none;
-		if (System.GetCLIParam("aicfNoForces", none) && !none.IsEmpty() &&
+		if (AICF_Launch.Get("aicfNoForces", none) && !none.IsEmpty() &&
 			AICF_ContentProfile.GetActive().GetStableFactionKey(factionKey) == none)
 			return 0;
 		return SquadsPerSide();
@@ -305,27 +305,27 @@ class AICF_Stage1Config
 	{
 		string value;
 		// Apply the coarse preset first. Explicit timing overrides below always win.
-		if (System.GetCLIParam("aicfWarTempoPercent", value))
+		if (AICF_Launch.Get("aicfWarTempoPercent", value))
 			SetWarTempoPercent(value.ToInt());
-		if (System.GetCLIParam("aicfInitialTickets", value))
+		if (AICF_Launch.Get("aicfInitialTickets", value))
 			SetInitialTickets(value.ToInt());
-		if (System.GetCLIParam("aicfReplacementTicketCost", value))
+		if (AICF_Launch.Get("aicfReplacementTicketCost", value))
 			SetReplacementTicketCost(value.ToInt());
-		if (System.GetCLIParam("aicfReinforcementDelayMs", value))
+		if (AICF_Launch.Get("aicfReinforcementDelayMs", value))
 			SetReinforcementDelayMs(value.ToInt());
-		if (System.GetCLIParam("aicfCommanderIntervalMs", value))
+		if (AICF_Launch.Get("aicfCommanderIntervalMs", value))
 			SetCommanderIntervalMs(value.ToInt());
-		if (System.GetCLIParam("aicfMaxManagedAgents", value))
+		if (AICF_Launch.Get("aicfMaxManagedAgents", value))
 			SetMaxManagedAgents(value.ToInt());
-		if (System.GetCLIParam("aicfMaxAgentsPerFaction", value))
+		if (AICF_Launch.Get("aicfMaxAgentsPerFaction", value))
 			m_iMaxAgentsPerFaction = ClampInt(value.ToInt(), 0, MAX_MANAGED_AGENTS);
-		if (System.GetCLIParam("aicfExpectedPlayerFaction", value))
+		if (AICF_Launch.Get("aicfExpectedPlayerFaction", value))
 			SetExpectedPlayerFaction(value);
-		if (System.GetCLIParam("aicfAICommanderMode", value))
+		if (AICF_Launch.Get("aicfAICommanderMode", value))
 			SetAICommanderMode(value);
-		if (System.GetCLIParam("aicfRequirePlayerForResult", value))
+		if (AICF_Launch.Get("aicfRequirePlayerForResult", value))
 			SetRequirePlayerForResult(value.ToInt() > 0);
-		if (System.GetCLIParam("aicfActiveForcesRolesEnabled", value))
+		if (AICF_Launch.Get("aicfActiveForcesRolesEnabled", value))
 			SetActiveForcesRolesEnabled(value.ToInt() > 0);
 	}
 

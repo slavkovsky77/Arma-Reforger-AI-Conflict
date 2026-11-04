@@ -328,7 +328,7 @@ class AICF_InfantryApproachRoute
 	static float StepM()
 	{
 		string value;
-		if (System.GetCLIParam("aicfApproachStepM", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfApproachStepM", value) && !value.IsEmpty())
 			return Math.Clamp(value.ToFloat(), 80, 300);
 		return 150;
 	}

@@ -1601,7 +1601,7 @@ class AICF_VehicleAcquisitionFlow
 	// (overhead 2, solid on two sides 1), the team's side first. No cover there: the spot as before.
 	protected static vector CoveredStaging(BaseWorld world, vector pad, vector direction, float offset, vector fallback)
 	{
-		if (System.IsCLIParam("aicfOpenStaging"))
+		if (AICF_Launch.Has("aicfOpenStaging"))
 			return fallback;
 		vector best = fallback;
 		int bestScore = AICF_InfantryApproachRoute.CoverScore(world, fallback) * 10;
@@ -1822,7 +1822,7 @@ class AICF_VehicleAcquisitionFlow
 	protected int ZcrSiteRelookMs()
 	{
 		string value;
-		if (System.GetCLIParam("aicfSiteRelookMs", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfSiteRelookMs", value) && !value.IsEmpty())
 		{
 			if (value.ToInt() <= 0)
 				return m_Config.GetWaitProbeIntervalMs();
@@ -1852,13 +1852,13 @@ class AICF_VehicleAcquisitionFlow
 		if (s_iPadWaitMs >= 0)
 			return s_iPadWaitMs;
 		string value;
-		if (System.GetCLIParam("aicfPadWaitMs", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfPadWaitMs", value) && !value.IsEmpty())
 		{
 			s_iPadWaitMs = Math.Max(0, value.ToInt());
 			return s_iPadWaitMs;
 		}
 		float speed = 1;
-		if (System.GetCLIParam("zcrSpeed", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("zcrSpeed", value) && !value.IsEmpty())
 			speed = Math.Max(1, value.ToFloat());
 		s_iPadWaitMs = 45000 / speed;
 		return s_iPadWaitMs;
@@ -1985,7 +1985,7 @@ class AICF_VehicleAcquisitionFlow
 	static int ArmedRideEvery()
 	{
 		string value;
-		if (System.GetCLIParam("aicfArmedRideEvery", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfArmedRideEvery", value) && !value.IsEmpty())
 			return Math.ClampInt(value.ToInt(), 0, 20);
 		return 2;     // ZCR 21 Oct: every 2nd ride armed (was 3rd), half of those APCs - Martin: "more types of vehicles, for combat too"
 	}

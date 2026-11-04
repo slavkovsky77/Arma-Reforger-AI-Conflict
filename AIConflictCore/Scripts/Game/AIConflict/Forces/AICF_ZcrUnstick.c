@@ -15,7 +15,7 @@ class AICF_ZcrUnstick
 	static bool Enabled()
 	{
 		string value;
-		return !(System.GetCLIParam("aicfZcrUnstick", value) && value == "0");
+		return !(AICF_Launch.Get("aicfZcrUnstick", value) && value == "0");
 	}
 
 	// No field hold in front of the objective (3 Nov, note 530 - Martin: "continue developing so farm is actually captured
@@ -31,7 +31,7 @@ class AICF_ZcrUnstick
 			return false;
 		float nearM = 450;
 		string value;
-		if (System.GetCLIParam("aicfZcrNoHoldNearM", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfZcrNoHoldNearM", value) && !value.IsEmpty())
 			nearM = value.ToFloat();
 		if (nearM <= 0)
 			return false;
@@ -50,7 +50,7 @@ class AICF_ZcrUnstick
 	static bool TowardObjective(AICF_GroupSlot slot, vector objective, out vector endpoint)
 	{
 		string value;
-		if ((System.GetCLIParam("aicfZcrTowardLeg", value) && value == "0") || !NearAttackTarget(slot))
+		if ((AICF_Launch.Get("aicfZcrTowardLeg", value) && value == "0") || !NearAttackTarget(slot))
 			return false;
 		SCR_AIGroup group = slot.GetGroup();
 		AIPathfindingComponent path = AIPathfindingComponent.Cast(group.FindComponent(AIPathfindingComponent));

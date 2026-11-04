@@ -35,7 +35,7 @@ class AICF_RoadGraph
 
 	static bool Enabled()
 	{
-		return !System.IsCLIParam("aicfNoRoadRoutes");
+		return !AICF_Launch.Has("aicfNoRoadRoutes");
 	}
 
 	static AICF_RoadGraph Get()

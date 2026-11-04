@@ -14,7 +14,7 @@ class AICF_BuildingAnchor
 	static bool Find(SCR_CampaignMilitaryBaseComponent base, vector spawn, out vector anchor)
 	{
 		anchor = spawn;
-		if (!base || !base.GetOwner() || System.IsCLIParam("aicfDefendInOpen"))
+		if (!base || !base.GetOwner() || AICF_Launch.Has("aicfDefendInOpen"))
 			return false;
 		EntityID id = base.GetOwner().GetID();
 		vector cached;

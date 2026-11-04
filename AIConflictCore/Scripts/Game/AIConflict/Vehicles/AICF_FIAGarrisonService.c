@@ -154,7 +154,7 @@ class AICF_FIAGarrisonService
 		if (!m_bPlanValid) return;
 		// ZCR, 28 Oct: the one-point sub-lab (-zcrOnePoint) leaves its point neutral for both armies to fight over - no
 		// FIA garrison there or anywhere.
-		if (System.IsCLIParam("zcrOnePoint")) return;
+		if (AICF_Launch.Has("zcrOnePoint")) return;
 		int now = System.GetTickCount();
 		foreach (AICF_FIAGarrison g : s_aDefenders)
 		{

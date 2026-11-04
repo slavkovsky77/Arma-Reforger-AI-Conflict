@@ -25,7 +25,7 @@ class AICF_SupplyDepots
 	static int Count()
 	{
 		string value;
-		if (System.GetCLIParam("aicfSupplyDepots", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfSupplyDepots", value) && !value.IsEmpty())
 			return Math.ClampInt(value.ToInt(), 0, 6);
 		return 2;
 	}
@@ -88,7 +88,7 @@ class AICF_SupplyDepots
 	static int IncomePerMinute()
 	{
 		string value;
-		if (System.GetCLIParam("aicfSupplyDepotIncome", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfSupplyDepotIncome", value) && !value.IsEmpty())
 			return Math.ClampInt(value.ToInt(), 0, 2000);
 		return 150;
 	}

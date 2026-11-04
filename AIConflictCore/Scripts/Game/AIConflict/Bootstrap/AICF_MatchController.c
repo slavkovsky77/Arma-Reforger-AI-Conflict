@@ -1514,10 +1514,10 @@ class AICF_MatchController
 	static int ConstructionTickMs()
 	{
 		string value;
-		if (System.GetCLIParam("aicfConstructionTickMs", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfConstructionTickMs", value) && !value.IsEmpty())
 			return Math.ClampInt(value.ToInt(), 100, 1000);
 		float speed = 1;
-		if (System.GetCLIParam("zcrSpeed", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("zcrSpeed", value) && !value.IsEmpty())
 			speed = Math.Max(1, value.ToFloat());
 		int ms = 250 / speed;
 		return Math.ClampInt(ms, 100, 1000);
@@ -1637,11 +1637,11 @@ class AICF_MatchController
 	protected void ZcrSecondWave(AICF_FactionState state, SCR_CampaignFaction faction)
 	{
 		string waveValue;
-		if (!state || !faction || !m_OrderPlanner || !System.GetCLIParam("aicfZcrSecondWave", waveValue) || waveValue != "1")
+		if (!state || !faction || !m_OrderPlanner || !AICF_Launch.Get("aicfZcrSecondWave", waveValue) || waveValue != "1")
 			return;
 		int keep = 1;
 		string keepValue;
-		if (System.GetCLIParam("aicfZcrSecondWaveKeep", keepValue) && !keepValue.IsEmpty())
+		if (AICF_Launch.Get("aicfZcrSecondWaveKeep", keepValue) && !keepValue.IsEmpty())
 			keep = keepValue.ToInt();
 		int attackAlive;
 		int attackFull;
@@ -7302,7 +7302,7 @@ class AICF_MatchController
 
 	protected int CountFactionSupportAgents(AICF_FactionState factionState, SCR_CampaignFaction faction)
 	{
-		if (!faction || !System.IsCLIParam("aicfCapCountsAll"))
+		if (!faction || !AICF_Launch.Has("aicfCapCountsAll"))
 			return 0;
 		int now = System.GetTickCount();
 		if (now - m_iSupportAtMs > 1000)

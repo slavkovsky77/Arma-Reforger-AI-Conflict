@@ -767,7 +767,7 @@ class AICF_ConstructionPlanner
 
 	protected bool FirstDepot(AICF_ConstructionOrder order)
 	{
-		if (order.m_eType != AICF_EConstructionType.LIGHT_DEPOT || !order.m_Faction || System.IsCLIParam("aicfFirstDepotOnce"))
+		if (order.m_eType != AICF_EConstructionType.LIGHT_DEPOT || !order.m_Faction || AICF_Launch.Has("aicfFirstDepotOnce"))
 			return false;
 		foreach (SCR_CatalogEntitySpawnerComponent spawner : SCR_CatalogEntitySpawnerComponent.INSTANCES)
 		{
@@ -798,13 +798,13 @@ class AICF_ConstructionPlanner
 	protected bool MainDepot(AICF_ConstructionOrder order)
 	{
 		return order.m_eType == AICF_EConstructionType.LIGHT_DEPOT && order.m_Base && order.m_Base.IsHQ()
-			&& System.IsCLIParam("aicfMainDepotLong");
+			&& AICF_Launch.Has("aicfMainDepotLong");
 	}
 
 	static int FortificationsPerBase()
 	{
 		string value;
-		if (System.GetCLIParam("aicfFortificationsPerBase", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfFortificationsPerBase", value) && !value.IsEmpty())
 			return Math.ClampInt(value.ToInt(), 0, 12);
 		return 5;      // ZCR 20 Oct: 5 (was 2) - "build much more"
 	}
@@ -816,7 +816,7 @@ class AICF_ConstructionPlanner
 	protected bool ZcrFortifyHere(AICF_ConstructionOrder order)
 	{
 		string onePoint;
-		if (!order || !order.m_Base || !System.GetCLIParam("zcrOnePoint", onePoint) || onePoint.IsEmpty())
+		if (!order || !order.m_Base || !AICF_Launch.Get("zcrOnePoint", onePoint) || onePoint.IsEmpty())
 			return false;
 		onePoint.Replace("_", " ");
 		if (WidgetManager.Translate(order.m_Base.GetBaseName()) != onePoint)

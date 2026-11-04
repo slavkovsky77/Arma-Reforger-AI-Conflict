@@ -514,7 +514,7 @@ class AICF_VehicleSpawner
 		{
 			s_fSafeExitDeg = 8;
 			string value;
-			if (System.GetCLIParam("zcrSafeBoardDeg", value) && !value.IsEmpty())
+			if (AICF_Launch.Get("zcrSafeBoardDeg", value) && !value.IsEmpty())
 				s_fSafeExitDeg = Math.Clamp(value.ToFloat(), 0, 90);
 		}
 		if (s_fSafeExitDeg <= 0 || !vehicle)
@@ -532,7 +532,7 @@ class AICF_VehicleSpawner
 			return s_fMaxFootprintDelta;
 		string value;
 		s_fMaxFootprintDelta = 1.0;
-		if (System.GetCLIParam("aicfMaxSpawnDeltaM", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfMaxSpawnDeltaM", value) && !value.IsEmpty())
 			s_fMaxFootprintDelta = Math.Clamp(value.ToFloat(), 0.2, 10);
 		return s_fMaxFootprintDelta;
 	}
@@ -659,7 +659,7 @@ class AICF_VehicleSpawner
 	protected static float ZcrPadRoadMeters()
 	{
 		string value;
-		if (System.GetCLIParam("aicfPadNearRoadMeters", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfPadNearRoadMeters", value) && !value.IsEmpty())
 			return Math.Clamp(value.ToFloat(), 0, 40);
 		return 12;
 	}

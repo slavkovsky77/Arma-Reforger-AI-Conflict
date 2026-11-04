@@ -49,7 +49,7 @@ class AICF_ZcrFortPlan
 
 	static bool On()
 	{
-		return System.IsCLIParam("zcrFortPlan");
+		return AICF_Launch.Has("zcrFortPlan");
 	}
 
 	protected static void Load()
@@ -287,7 +287,7 @@ class AICF_ZcrFortPlan
 	// base from the candidate: facing it first, then +-30, +-60, +-90 deg and the back, the centres and every check as before.
 	static bool FallbackYaw(AICF_ConstructionOrder order, vector at, int attempt, out float yaw)
 	{
-		if (!order || order.m_eType != AICF_EConstructionType.FORTIFICATION || !System.IsCLIParam("zcrFortFace") || !order.m_Base || attempt < 0)
+		if (!order || order.m_eType != AICF_EConstructionType.FORTIFICATION || !AICF_Launch.Has("zcrFortFace") || !order.m_Base || attempt < 0)
 			return false;
 		vector threat = Threat(order.m_Base, order.m_Faction);
 		if (threat == vector.Zero)

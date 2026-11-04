@@ -46,7 +46,7 @@ class AICF_ZcrAttackPlan
 
 	static bool On()
 	{
-		return System.IsCLIParam("zcrAttackPlan");
+		return AICF_Launch.Has("zcrAttackPlan");
 	}
 
 	protected static void Load()
@@ -155,7 +155,7 @@ class AICF_ZcrAttackPlan
 
 	static bool LiveOn()
 	{
-		return System.IsCLIParam("zcrLivePlan");
+		return AICF_Launch.Has("zcrLivePlan");
 	}
 
 	// The live planner's drone order for a side (2 Nov night, note 515 - Martin: "maybe even the LLM commander should decide
@@ -418,7 +418,7 @@ class AICF_ZcrAttackPlan
 	{
 		if (key.IndexOf("live|") == 0)
 			return LiveGoKey(key);
-		if (System.IsCLIParam("zcrNoAttackHold") || s_mGo.Get(key))
+		if (AICF_Launch.Has("zcrNoAttackHold") || s_mGo.Get(key))
 			return true;
 		array<int> holding = s_mHolding.Get(key);
 		if (!holding || holding.IsEmpty())

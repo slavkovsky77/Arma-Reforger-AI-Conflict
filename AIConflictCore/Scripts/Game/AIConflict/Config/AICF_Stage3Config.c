@@ -164,7 +164,7 @@ class AICF_Stage3Config
 		// where the same 25 s failed teams' boardings again and again (one team 5 times in a row). The defaults are
 		// now game time: 75 s for the driver and gunner, 90 s for the passengers, at any -zcrSpeed.
 		float speed = 1;
-		if (System.GetCLIParam("zcrSpeed", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("zcrSpeed", value) && !value.IsEmpty())
 			speed = Math.Max(1, value.ToFloat());
 		m_iBoardingTimeoutMs = Math.Max(10000, 75000 / speed);
 		m_iPassengerBoardingTimeoutMs = Math.Max(10000, 90000 / speed);
@@ -172,76 +172,76 @@ class AICF_Stage3Config
 		// seconds at the watched 3x; most failed rides were SPAWN_SITE_APPROACH_TIMEOUT. -aicfVehicleSpawnApproachTimeoutMs
 		// still sets it (game ms).
 		m_iSpawnApproachTimeoutMs = Math.Max(20000, m_iSpawnApproachTimeoutMs / speed);
-		if (System.GetCLIParam("aicfTransportVehiclesPerFaction", value))
+		if (AICF_Launch.Get("aicfTransportVehiclesPerFaction", value))
 			m_iTransportVehiclesPerFaction = ClampInt(value.ToInt(), 0, AICF_Stage1Config.GROUP_SLOTS_PER_FACTION);
-		if (System.GetCLIParam("aicfArmedLightVehiclesPerFaction", value))
+		if (AICF_Launch.Get("aicfArmedLightVehiclesPerFaction", value))
 			m_iArmedLightVehiclesPerFaction = ClampInt(value.ToInt(), 0, AICF_Stage1Config.GROUP_SLOTS_PER_FACTION);
-		if (System.GetCLIParam("aicfMaxVehiclesPerFaction", value))
+		if (AICF_Launch.Get("aicfMaxVehiclesPerFaction", value))
 			m_iMaxVehiclesPerFaction = ClampInt(value.ToInt(), 0, AICF_Stage1Config.GROUP_SLOTS_PER_FACTION);
-		if (System.GetCLIParam("aicfVehicleBoardingTimeoutMs", value))
+		if (AICF_Launch.Get("aicfVehicleBoardingTimeoutMs", value))
 			m_iBoardingTimeoutMs = ClampInt(value.ToInt(), 10000, 600000);
-		if (System.GetCLIParam("aicfVehicleBoardingApproachTimeoutMs", value))
+		if (AICF_Launch.Get("aicfVehicleBoardingApproachTimeoutMs", value))
 			m_iBoardingApproachTimeoutMs = ClampInt(value.ToInt(), 10000, 600000);
-		if (System.GetCLIParam("aicfVehiclePassengerBoardingTimeoutMs", value))
+		if (AICF_Launch.Get("aicfVehiclePassengerBoardingTimeoutMs", value))
 			m_iPassengerBoardingTimeoutMs = ClampInt(value.ToInt(), 10000, 600000);
-		if (System.GetCLIParam("aicfVehicleDismountTimeoutMs", value))
+		if (AICF_Launch.Get("aicfVehicleDismountTimeoutMs", value))
 			m_iDismountTimeoutMs = ClampInt(value.ToInt(), 10000, 600000);
-		if (System.GetCLIParam("aicfVehicleStuckTimeoutMs", value))
+		if (AICF_Launch.Get("aicfVehicleStuckTimeoutMs", value))
 			m_iStuckTimeoutMs = ClampInt(value.ToInt(), 30000, 3600000);
-		if (System.GetCLIParam("aicfVehicleProgressMeters", value))
+		if (AICF_Launch.Get("aicfVehicleProgressMeters", value))
 			m_fProgressMeters = ClampFloat(value.ToFloat(), 1.0, 500.0);
-		if (System.GetCLIParam("aicfVehicleMotionMeters", value))
+		if (AICF_Launch.Get("aicfVehicleMotionMeters", value))
 			m_fMotionMeters = ClampFloat(value.ToFloat(), 0.5, 50.0);
-		if (System.GetCLIParam("aicfVehicleObjectiveProgressTimeoutMs", value))
+		if (AICF_Launch.Get("aicfVehicleObjectiveProgressTimeoutMs", value))
 			m_iObjectiveProgressTimeoutMs = ClampInt(value.ToInt(), 60000, 3600000);
-		if (System.GetCLIParam("aicfVehicleMaxRecoveries", value))
+		if (AICF_Launch.Get("aicfVehicleMaxRecoveries", value))
 			m_iMaxRecoveries = ClampInt(value.ToInt(), 0, 20);
-		if (System.GetCLIParam("aicfVehicleDismountDistanceMeters", value))
+		if (AICF_Launch.Get("aicfVehicleDismountDistanceMeters", value))
 			m_fDismountDistanceMeters = ClampFloat(value.ToFloat(), 30.0, 500.0);
-		if (System.GetCLIParam("aicfVehicleRetryIntervalMs", value))
+		if (AICF_Launch.Get("aicfVehicleRetryIntervalMs", value))
 			m_iRetryIntervalMs = ClampInt(value.ToInt(), 1000, 600000);
-		if (System.GetCLIParam("aicfVehicleSpawnMaxAttempts", value))
+		if (AICF_Launch.Get("aicfVehicleSpawnMaxAttempts", value))
 			m_iSpawnMaxAttempts = ClampInt(value.ToInt(), 1, 10);
-		if (System.GetCLIParam("aicfVehicleRetryBackoffMaxMs", value))
+		if (AICF_Launch.Get("aicfVehicleRetryBackoffMaxMs", value))
 			m_iRetryBackoffMaxMs = ClampInt(value.ToInt(), 1000, 600000);
-		if (System.GetCLIParam("aicfVehicleWaitProbeIntervalMs", value))
+		if (AICF_Launch.Get("aicfVehicleWaitProbeIntervalMs", value))
 			m_iWaitProbeIntervalMs = ClampInt(value.ToInt(), 10000, 1800000);
-		if (System.GetCLIParam("aicfVehicleCohesionWaitTimeoutMs", value))
+		if (AICF_Launch.Get("aicfVehicleCohesionWaitTimeoutMs", value))
 			m_iCohesionWaitTimeoutMs = ClampInt(value.ToInt(), 60000, 1800000);
-		if (System.GetCLIParam("aicfVehicleNoRangeProgressTimeoutMs", value))
+		if (AICF_Launch.Get("aicfVehicleNoRangeProgressTimeoutMs", value))
 			m_iNoRangeProgressTimeoutMs = ClampInt(value.ToInt(), 60000, 300000);
-		if (System.GetCLIParam("aicfVehicleCleanupDelayMs", value))
+		if (AICF_Launch.Get("aicfVehicleCleanupDelayMs", value))
 			m_iCleanupDelayMs = ClampInt(value.ToInt(), 0, 1800000);
-		if (System.GetCLIParam("aicfVehicleAbandonedWorldPoolPerFaction", value))
+		if (AICF_Launch.Get("aicfVehicleAbandonedWorldPoolPerFaction", value))
 			m_iAbandonedWorldPoolPerFaction = ClampInt(value.ToInt(), 1, 16);
-		if (System.GetCLIParam("aicfVehicleMinimumRouteMeters", value))
+		if (AICF_Launch.Get("aicfVehicleMinimumRouteMeters", value))
 			m_fMinimumRouteMeters = ClampFloat(value.ToFloat(), 100.0, 5000.0);
-		if (System.GetCLIParam("aicfVehicleMaximumReuseDistanceMeters", value))
+		if (AICF_Launch.Get("aicfVehicleMaximumReuseDistanceMeters", value))
 			m_fMaximumReuseDistanceMeters = ClampFloat(value.ToFloat(), 25.0, 1000.0);
-		if (System.GetCLIParam("aicfVehicleMaximumSpawnDistanceMeters", value))
+		if (AICF_Launch.Get("aicfVehicleMaximumSpawnDistanceMeters", value))
 			m_fMaximumSpawnDistanceMeters = ClampFloat(value.ToFloat(), 100.0, 10000.0);
-		if (System.GetCLIParam("aicfVehicleCohesionDistanceMeters", value))
+		if (AICF_Launch.Get("aicfVehicleCohesionDistanceMeters", value))
 			m_fCohesionDistanceMeters = ClampFloat(value.ToFloat(), 25.0, 500.0);
-		if (System.GetCLIParam("aicfVehicleMinimumRequestAgents", value))
+		if (AICF_Launch.Get("aicfVehicleMinimumRequestAgents", value))
 			m_iMinimumVehicleRequestAgents = ClampInt(
 				value.ToInt(),
 				1,
 				AICF_Stage1Config.MAX_GROUP_SIZE);
-		if (System.GetCLIParam("aicfVehiclePassengerStallMs", value))
+		if (AICF_Launch.Get("aicfVehiclePassengerStallMs", value))
 			m_iPassengerStallMs = ClampInt(value.ToInt(), 3000, 30000);
-		if (System.GetCLIParam("aicfVehiclePassengerMaxRetries", value))
+		if (AICF_Launch.Get("aicfVehiclePassengerMaxRetries", value))
 			m_iPassengerMaxRetries = ClampInt(value.ToInt(), 0, 3);
-		if (System.GetCLIParam("aicfHiddenRecoveryPlayerRadiusMeters", value))
+		if (AICF_Launch.Get("aicfHiddenRecoveryPlayerRadiusMeters", value))
 			m_fHiddenRecoveryPlayerRadiusMeters = ClampFloat(value.ToFloat(), 50.0, 1000.0);
-		if (System.GetCLIParam("aicfHiddenRecoveryEnabled", value))
+		if (AICF_Launch.Get("aicfHiddenRecoveryEnabled", value))
 			m_bHiddenRecoveryEnabled = value.ToInt() > 0;
-		if (System.GetCLIParam("aicfVehicleSpawnStagingOffsetMeters", value))
+		if (AICF_Launch.Get("aicfVehicleSpawnStagingOffsetMeters", value))
 			m_fSpawnStagingOffsetMeters = ClampFloat(value.ToFloat(), 20.0, 160.0);
-		if (System.GetCLIParam("aicfVehicleSpawnStagingRadiusMeters", value))
+		if (AICF_Launch.Get("aicfVehicleSpawnStagingRadiusMeters", value))
 			m_fSpawnStagingRadiusMeters = ClampFloat(value.ToFloat(), 5.0, 100.0);
-		if (System.GetCLIParam("aicfVehicleSpawnStagingHoldMs", value))
+		if (AICF_Launch.Get("aicfVehicleSpawnStagingHoldMs", value))
 			m_iSpawnStagingHoldMs = ClampInt(value.ToInt(), 1000, 10000);
-		if (System.GetCLIParam("aicfVehicleSpawnApproachTimeoutMs", value))
+		if (AICF_Launch.Get("aicfVehicleSpawnApproachTimeoutMs", value))
 			m_iSpawnApproachTimeoutMs = ClampInt(value.ToInt(), 60000, 900000);
 	}
 

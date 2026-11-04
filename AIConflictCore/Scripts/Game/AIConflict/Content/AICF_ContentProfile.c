@@ -352,7 +352,7 @@ class AICF_ContentProfile
 	static int ApcEvery()
 	{
 		string value;
-		if (System.GetCLIParam("aicfApcEvery", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("aicfApcEvery", value) && !value.IsEmpty())
 			return Math.ClampInt(value.ToInt(), 0, 20);
 		return 2;
 	}
@@ -459,7 +459,7 @@ class AICF_ContentProfile
 			// keep it, bigger ones take the next candidate (the Ural). -aicfVanSeats N (8 = as before).
 			accessibleSeats = 2;
 			string vanSeats;
-			if (System.GetCLIParam("aicfVanSeats", vanSeats) && !vanSeats.IsEmpty())
+			if (AICF_Launch.Get("aicfVanSeats", vanSeats) && !vanSeats.IsEmpty())
 				accessibleSeats = Math.ClampInt(vanSeats.ToInt(), 1, 8);
 			hasPilot = true;
 			return kind != AICF_EVehicleKind.ARMED_LIGHT;

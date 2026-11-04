@@ -27,7 +27,7 @@ class AICF_ConstructionConfig
 		// site, then the forced fallback found one in 13 s (w17), and every depot waited for it.
 		// Explicit -aicfConstruction*Ms options still win.
 		float speed = 1;
-		if (System.GetCLIParam("zcrSpeed", value) && !value.IsEmpty())
+		if (AICF_Launch.Get("zcrSpeed", value) && !value.IsEmpty())
 			speed = Math.Max(1, value.ToFloat());
 		m_fSpeed = speed;
 		m_iDecisionMs = 60000 / speed;
@@ -38,23 +38,23 @@ class AICF_ConstructionConfig
 		// (budget_wait_windows=41; Martin, 21 Oct: "why is the bot so long choosing sites, like three minutes?").
 		// Three times that, times the lab's speed-up; the 10-ms slice per tick still bounds the CPU.
 		m_iQueriesPerTick = Math.ClampInt((int)Math.Round(288 * speed), 96, 2048);
-		if (System.GetCLIParam("aicfConstructionDecisionMs", value))
+		if (AICF_Launch.Get("aicfConstructionDecisionMs", value))
 			m_iDecisionMs = Math.ClampInt(value.ToInt(), 60000, 3600000);
-		if (System.GetCLIParam("aicfConstructionCooldownMs", value))
+		if (AICF_Launch.Get("aicfConstructionCooldownMs", value))
 			m_iCooldownMs = Math.ClampInt(value.ToInt(), 60000, 3600000);
-		if (System.GetCLIParam("aicfConstructionDeadlineMs", value))
+		if (AICF_Launch.Get("aicfConstructionDeadlineMs", value))
 			m_iDeadlineMs = Math.ClampInt(value.ToInt(), 1000, 120000);
-		if (System.GetCLIParam("aicfConstructionCandidatesPerTick", value))
+		if (AICF_Launch.Get("aicfConstructionCandidatesPerTick", value))
 			m_iCandidatesPerTick = Math.ClampInt(value.ToInt(), 1, 32);
-		if (System.GetCLIParam("aicfConstructionMetadataEntriesPerTick", value))
+		if (AICF_Launch.Get("aicfConstructionMetadataEntriesPerTick", value))
 			m_iMetadataEntriesPerTick = Math.ClampInt(value.ToInt(), 1, 32);
-		if (System.GetCLIParam("aicfConstructionSliceMs", value))
+		if (AICF_Launch.Get("aicfConstructionSliceMs", value))
 			m_iSliceMs = Math.ClampInt(value.ToInt(), 1, 16);
-		if (System.GetCLIParam("aicfConstructionQueriesPerTick", value))
+		if (AICF_Launch.Get("aicfConstructionQueriesPerTick", value))
 			m_iQueriesPerTick = Math.ClampInt(value.ToInt(), 16, 2048);
-		if (System.GetCLIParam("aicfConstructionAttempts", value))
+		if (AICF_Launch.Get("aicfConstructionAttempts", value))
 			m_iAttempts = Math.ClampInt(value.ToInt(), 4, 512);
-		if (System.GetCLIParam("aicfConstructionReserveGroups", value))
+		if (AICF_Launch.Get("aicfConstructionReserveGroups", value))
 			m_iReserveGroups = Math.ClampInt(value.ToInt(), 0, 100);
 	}
 }

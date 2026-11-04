@@ -19,7 +19,7 @@ class AICF_RoadMines
 
 	protected static void Clear()
 	{
-		if (System.IsCLIParam("aicfKeepRoadMines"))
+		if (AICF_Launch.Has("aicfKeepRoadMines"))
 		{
 			AICF_Stage1Diagnostics.Info("ROAD_MINES_SCAN", "skipped=1 reason=CLI_KEEP");
 			return;
@@ -85,7 +85,7 @@ class AICF_RoadMines
 	{
 		// Martin, 21 Oct 03:05: "don't remove barriers and hedgehogs from the map by default, just improve the
 		// driving" - off unless -aicfClearRoadBlocks (minefields stay removed by default).
-		if (!System.IsCLIParam("aicfClearRoadBlocks"))
+		if (!AICF_Launch.Has("aicfClearRoadBlocks"))
 			return;
 		int started = System.GetTickCount();
 		s_aFound = {};
