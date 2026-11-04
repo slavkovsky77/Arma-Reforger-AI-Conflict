@@ -182,6 +182,24 @@ class AICF_ZcrAttackPlan
 		return s_mLiveStrategy.Get(faction);
 	}
 
+	// The live general's order for one of its fighting vehicles (4 Nov, note 544 - Martin: "i notice us apc not being maybe
+	// used properly do they even know how to shoot?"): "armour <faction> <unit> overwatch|assault|hold <x> <z>" - ZCR_Armour
+	// drives it there (overwatch, hold) or lets it close in with the infantry (assault).
+	protected static ref map<string, string> s_mLiveArmourMode = new map<string, string>();
+	protected static ref map<string, vector> s_mLiveArmourAt = new map<string, vector>();
+
+	static bool LiveArmour(string faction, int unit, out string mode, out vector at)
+	{
+		if (!LiveOn() || faction.IsEmpty())
+			return false;
+		LoadLive();
+		string key = faction + "|" + unit;
+		if (!s_mLiveArmourMode.Find(key, mode))
+			return false;
+		at = s_mLiveArmourAt.Get(key);
+		return true;
+	}
+
 	static int LiveDroneTarget(string faction)
 	{
 		int target = -1;
@@ -216,6 +234,8 @@ class AICF_ZcrAttackPlan
 		map<string, int> droneTeams = new map<string, int>();
 		map<string, int> droneTarget = new map<string, int>();
 		map<string, string> strategy = new map<string, string>();
+		map<string, string> armourMode = new map<string, string>();
+		map<string, vector> armourAt = new map<string, vector>();
 		AICF_ZcrPlanLane lane;
 		bool complete;
 		while (f.ReadLine(line) >= 0)
@@ -231,6 +251,13 @@ class AICF_ZcrAttackPlan
 				break;
 			}
 			// "drones <faction> <teams> <target node, -1 none>": the live planner's drone order (ZCR_Strategist applies it).
+			if (v[0] == "armour" && v.Count() >= 6)
+			{
+				armourMode.Set(v[1] + "|" + v[2], v[3]);
+				armourAt.Set(v[1] + "|" + v[2], Vector(v[4].ToFloat(), 0, v[5].ToFloat()));
+				lane = null;
+				continue;
+			}
 			if (v[0] == "strategy" && v.Count() >= 3)
 			{
 				strategy.Set(v[1], v[2]);
@@ -274,6 +301,8 @@ class AICF_ZcrAttackPlan
 		s_mLive = plans;
 		s_mLiveDroneTeams = droneTeams;
 		s_mLiveStrategy = strategy;
+		s_mLiveArmourMode = armourMode;
+		s_mLiveArmourAt = armourAt;
 		s_mLiveDroneTarget = droneTarget;
 		s_iLiveVersion = version;
 		Print(string.Format("[ZCR][LIVEPLAN] t=%1 event=loaded version=%2 teams=%3", Math.Round(now / 1000), version, plans.Count()), LogLevel.NORMAL);
