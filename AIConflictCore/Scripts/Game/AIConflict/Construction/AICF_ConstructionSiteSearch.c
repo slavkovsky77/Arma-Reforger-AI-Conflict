@@ -194,7 +194,8 @@ class AICF_ConstructionSiteSearch
 			searchCenter = roadSpot;
 		}
 		// ZCR (2 Nov): a fortification tries its base's planned spots and facings first (AICF_ZcrFortPlan, lab/fortplan.py;
-		// Seed sets the candidate index, -1000 - 10 x spot - variant, which the placement log reads).
+		// Seed sets the candidate index, -1000 - 10 x spot - variant, which the placement log reads); 4 Nov (note 538): the
+		// live general's field spots before them (AICF_ZcrFortPlan.FieldSeed).
 		else if (AICF_ZcrFortPlan.Seed(order, roadSpot, roadYaw))
 		{
 			order.m_fYaw = roadYaw;
@@ -412,7 +413,9 @@ class AICF_ConstructionSiteSearch
 			return false;
 		vector worldMin, worldMax;
 		terrain.GetTerrainBoundBox(worldMin, worldMax);
-		if (VolumeInsideBounds(mins, maxs, order.m_aTransform, worldMin, worldMax, order.m_Provider.GetOwner().GetOrigin(), order.m_Provider.GetBuildingRadius()))
+		// ZCR (4 Nov, note 538): a field fortification reaches out to its spot (AICF_ZcrFortPlan.OrderReach).
+		if (VolumeInsideBounds(mins, maxs, order.m_aTransform, worldMin, worldMax, order.m_Provider.GetOwner().GetOrigin(),
+			AICF_ZcrFortPlan.OrderReach(order, order.m_Provider.GetBuildingRadius())))
 			return true;
 		order.m_sReason = "OUTSIDE_BUILDING_OR_WORLD_BOUNDS";
 		return false;
@@ -812,7 +815,7 @@ class AICF_ConstructionSiteSearch
 		WorkBounds(order, mins, maxs);
 		order.m_Path.Begin(order.m_vPathStart, order.m_aWorkCandidates, mins - "0.5 0 0.5", maxs + "0.5 0 0.5");
 		order.m_Path.AddStarts(order.m_aPathStarts);
-		order.m_Path.IncludeArea(order.m_vProviderPosition, order.m_Provider.GetBuildingRadius() + 32);
+		order.m_Path.IncludeArea(order.m_vProviderPosition, AICF_ZcrFortPlan.OrderReach(order, order.m_Provider.GetBuildingRadius()) + 32);
 		order.m_Path.Seed(order.m_Navigation);
 		return order.m_Path.Step(order, pathfinding, Math.Max(0, sliceMs - (System.GetTickCount() - started)));
 	}

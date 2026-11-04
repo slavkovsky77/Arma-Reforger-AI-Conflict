@@ -361,12 +361,17 @@ class AICF_ConstructionPlanner
 		// currently no cover and every defender gets killed by drones"): the live general chose to fortify - at the point it
 		// holds (-zcrOnePoint) fortifications come first, up to ZCR_FORTIFY_MAX, decided every 20 s (the round of building
 		// types gave Farm 0-2 fortifications a battle, the rear bases 25-35).
-		bool zcrFortify = ZcrFortifyHere(order);
+		// 4 Nov (note 538): a base nearest the live general's open field spots builds them first (AICF_ZcrFortPlan.FieldBase);
+		// they stand outside the base, so its own fortifications don't count against them.
+		bool zcrField = AICF_ZcrFortPlan.FieldBase(order);
+		bool zcrFortify = zcrField || ZcrFortifyHere(order);
 		if (zcrFortify)
 		{
 			state.m_iDueAt = now + 20000;
-			coverage[AICF_EConstructionType.FORTIFICATION] = Fortifications() >= ZCR_FORTIFY_MAX ||
-				now < state.m_aSearchRetryAt[AICF_EConstructionType.FORTIFICATION];
+			bool full = Fortifications() >= ZCR_FORTIFY_MAX;
+			if (zcrField)
+				full = false;
+			coverage[AICF_EConstructionType.FORTIFICATION] = full || now < state.m_aSearchRetryAt[AICF_EConstructionType.FORTIFICATION];
 		}
 		// ZCR (21 Oct, Martin: "free guys should build much more"): one base of a side searches for its first
 		// depot at a time; the others build. In the watched matches every base searched 7-11 minutes for a

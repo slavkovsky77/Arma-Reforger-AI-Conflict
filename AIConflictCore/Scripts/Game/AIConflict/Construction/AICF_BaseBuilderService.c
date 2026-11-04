@@ -210,7 +210,8 @@ class AICF_BaseBuilderService
 			!base || base.GetFaction() != faction || !provider || !provider.GetOwner() ||
 			provider.GetCampaignMilitaryBaseComponent() != base || composition.GetProviderEntity() != provider.GetOwner() ||
 			SCR_Faction.GetEntityFaction(composition.GetOwner()) != faction ||
-			vector.DistanceXZ(composition.GetOwner().GetOrigin(), provider.GetOwner().GetOrigin()) > provider.GetBuildingRadius())
+			vector.DistanceXZ(composition.GetOwner().GetOrigin(), provider.GetOwner().GetOrigin()) >
+			AICF_ZcrFortPlan.Reach(composition, provider.GetOwner(), provider.GetBuildingRadius()))
 			return false;
 		if (!m_aPlaced.Contains(composition))
 			m_aPlaced.Insert(composition);
@@ -234,7 +235,8 @@ class AICF_BaseBuilderService
 			if (provider && provider.GetOwner() && provider.GetCampaignMilitaryBaseComponent() == base &&
 				SCR_Faction.GetEntityFaction(composition.GetOwner()) == base.GetFaction() &&
 				SCR_Faction.GetEntityFaction(provider.GetOwner()) == base.GetFaction() &&
-				vector.DistanceXZ(composition.GetOwner().GetOrigin(), provider.GetOwner().GetOrigin()) <= provider.GetBuildingRadius())
+				vector.DistanceXZ(composition.GetOwner().GetOrigin(), provider.GetOwner().GetOrigin()) <=
+				AICF_ZcrFortPlan.Reach(composition, provider.GetOwner(), provider.GetBuildingRadius()))
 				return true;
 		}
 		return false;
@@ -275,7 +277,8 @@ class AICF_BaseBuilderService
 		Faction faction = SCR_Faction.GetEntityFaction(owner);
 		if (faction && faction != builder.m_Faction)
 			return false;
-		float radius = provider.GetBuildingRadius();
+		// ZCR (4 Nov, note 538): a field fortification is in reach out to where it stands (AICF_ZcrFortPlan.Reach).
+		float radius = AICF_ZcrFortPlan.Reach(composition, providerEntity, provider.GetBuildingRadius());
 		return radius > 0 && vector.DistanceSqXZ(providerEntity.GetOrigin(), owner.GetOrigin()) <= radius * radius;
 	}
 

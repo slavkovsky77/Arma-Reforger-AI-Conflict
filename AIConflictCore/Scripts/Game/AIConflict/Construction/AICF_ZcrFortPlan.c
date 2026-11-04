@@ -20,6 +20,7 @@ class AICF_ZcrFortSpot
 	float m_fFacing;
 	int m_iOrders;     // orders that tried it and placed nothing there
 	bool m_bUsed;
+	bool m_bWanted;    // a field spot still in the live plan
 }
 
 class AICF_ZcrFortBasePlan
@@ -231,7 +232,11 @@ class AICF_ZcrFortPlan
 
 	static bool Seed(AICF_ConstructionOrder order, out vector spot, out float yaw)
 	{
-		if (order.m_eType != AICF_EConstructionType.FORTIFICATION || !On() || !order.m_Base || !order.m_Base.GetOwner())
+		if (order.m_eType != AICF_EConstructionType.FORTIFICATION || !order.m_Base || !order.m_Base.GetOwner())
+			return false;
+		if (FieldSeed(order, spot, yaw))
+			return true;
+		if (!On())
 			return false;
 		Load();
 		AICF_ZcrFortBasePlan plan = PlanOf(order);
@@ -304,6 +309,177 @@ class AICF_ZcrFortPlan
 		return true;
 	}
 
+	// Field fortifications (4 Nov, note 538 - Martin: "llm general could actually build defense lines (bunkers and shit) where
+	// it needs like who told that some position outside of the base could not set up?", "there is vehicle that can build
+	// anywhere its allowed in many servers"): the positions the live general picked outside any base (lab/liveplan.py,
+	// "fort <side> <x> <z> <facing>" in the live plan - AICF_ZcrAttackPlan.LiveForts). The side's base nearest an open one,
+	// within FIELD_M, builds fortifications first (FieldBase, AICF_ConstructionPlanner.Decide); its site search tries the
+	// field spots before anything else (each at its facing, +-TURN_DEG, SHIFT_M aside), and the base's building radius
+	// reaches as far as the spot (OrderReach, Reach - the builders walk out from the base). Logged: [ZCR][FORTPLAN]
+	// event=field_spot / event=try ... field=1 / event=placed source=field. -aicfZcrFieldForts 0 turns it off.
+	static const float FIELD_M = 600;
+	static const int FIELD_INDEX = -100000;
+	protected static ref map<string, ref array<ref AICF_ZcrFortSpot>> s_mField = new map<string, ref array<ref AICF_ZcrFortSpot>>();
+	protected static ref map<string, ref array<int>> s_mFieldOpen = new map<string, ref array<int>>();   // order token -> spots
+	protected static ref map<string, int> s_mFieldTries = new map<string, int>();
+
+	static bool FieldOn()
+	{
+		string value;
+		if (System.GetCLIParam("aicfZcrFieldForts", value) && value == "0")
+			return false;
+		return AICF_ZcrAttackPlan.LiveOn();
+	}
+
+	// The side's field spots: the live plan's, kept across its versions (a spot within 5 m of one before keeps its tries and
+	// whether it was built); a spot the general dropped is no longer wanted.
+	protected static array<ref AICF_ZcrFortSpot> Field(string faction)
+	{
+		array<ref AICF_ZcrFortSpot> spots = s_mField.Get(faction);
+		if (!spots)
+		{
+			spots = {};
+			s_mField.Set(faction, spots);
+		}
+		array<vector> live = AICF_ZcrAttackPlan.LiveForts(faction);
+		foreach (AICF_ZcrFortSpot old : spots)
+			old.m_bWanted = false;
+		if (!live)
+			return spots;
+		foreach (vector p : live)
+		{
+			vector at = Vector(p[0], 0, p[2]);
+			AICF_ZcrFortSpot found;
+			foreach (AICF_ZcrFortSpot s : spots)
+			{
+				if (vector.DistanceXZ(s.m_vAt, at) < 5)
+					found = s;
+			}
+			if (!found)
+			{
+				found = new AICF_ZcrFortSpot();
+				found.m_vAt = at;
+				spots.Insert(found);
+				Print(string.Format("[ZCR][FORTPLAN] event=field_spot side=%1 spot=%2 x=%3 z=%4 facing=%5", faction, spots.Count() - 1,
+					Math.Round(at[0]), Math.Round(at[2]), Math.Round(p[1])), LogLevel.NORMAL);
+			}
+			found.m_fFacing = p[1];
+			found.m_bWanted = true;
+		}
+		return spots;
+	}
+
+	protected static bool FieldOpen(AICF_ZcrFortSpot s)
+	{
+		return s && s.m_bWanted && !s.m_bUsed && s.m_iOrders < MAX_ORDERS;
+	}
+
+	// The faction's base with a building provider nearest to a spot.
+	protected static SCR_CampaignMilitaryBaseComponent NearestOwnBase(vector at, Faction faction)
+	{
+		SCR_MilitaryBaseSystem system = SCR_MilitaryBaseSystem.GetInstance();
+		if (!system || !faction)
+			return null;
+		array<SCR_MilitaryBaseComponent> bases = {};
+		system.GetBases(bases);
+		SCR_CampaignMilitaryBaseComponent best;
+		float bestM = float.MAX;
+		foreach (SCR_MilitaryBaseComponent b : bases)
+		{
+			SCR_CampaignMilitaryBaseComponent own = SCR_CampaignMilitaryBaseComponent.Cast(b);
+			if (!own || !own.GetOwner() || own.GetFaction() != faction || !own.GetMasterProvider())
+				continue;
+			float d = vector.DistanceXZ(own.GetOwner().GetOrigin(), at);
+			if (d < bestM)
+			{
+				bestM = d;
+				best = own;
+			}
+		}
+		return best;
+	}
+
+	// This order's base builds field fortifications: an open field spot of its side has it as the nearest own base, within FIELD_M.
+	static bool FieldBase(AICF_ConstructionOrder order)
+	{
+		if (!order || !order.m_Base || !order.m_Base.GetOwner() || !FieldOn())
+			return false;
+		vector at = order.m_Base.GetOwner().GetOrigin();
+		foreach (AICF_ZcrFortSpot s : Field(order.m_sFaction))
+		{
+			if (FieldOpen(s) && vector.DistanceXZ(s.m_vAt, at) <= FIELD_M && NearestOwnBase(s.m_vAt, order.m_Faction) == order.m_Base)
+				return true;
+		}
+		return false;
+	}
+
+	// The site search's next field candidate for a fortification order of a field base (as Seed, the candidate index
+	// FIELD_INDEX - 10 x spot - variant).
+	protected static bool FieldSeed(AICF_ConstructionOrder order, out vector spot, out float yaw)
+	{
+		if (!FieldOn())
+			return false;
+		array<int> open = s_mFieldOpen.Get(order.m_sToken);
+		array<ref AICF_ZcrFortSpot> spots = Field(order.m_sFaction);
+		if (!open)
+		{
+			open = {};
+			vector at = order.m_Base.GetOwner().GetOrigin();
+			foreach (int i, AICF_ZcrFortSpot s : spots)
+			{
+				if (FieldOpen(s) && vector.DistanceXZ(s.m_vAt, at) <= FIELD_M && NearestOwnBase(s.m_vAt, order.m_Faction) == order.m_Base)
+					open.Insert(i);
+			}
+			s_mFieldOpen.Set(order.m_sToken, open);
+		}
+		int tries = s_mFieldTries.Get(order.m_sToken);
+		if (tries >= open.Count() * VARIANTS)
+			return false;
+		s_mFieldTries.Set(order.m_sToken, tries + 1);
+		int index = open[tries / VARIANTS];
+		int variant = tries % VARIANTS;
+		AICF_ZcrFortSpot chosen = spots[index];
+		if (variant == 0)
+			chosen.m_iOrders++;
+		float facing = chosen.m_fFacing;
+		if (variant == 1)
+			facing += TURN_DEG;
+		else if (variant == 2)
+			facing -= TURN_DEG;
+		spot = chosen.m_vAt;
+		vector front = Vector(Math.Sin(facing * Math.DEG2RAD), 0, Math.Cos(facing * Math.DEG2RAD));
+		vector right = Vector(front[2], 0, -front[0]);
+		if (variant == 3)
+			spot = spot - right * SHIFT_M;
+		else if (variant == 4)
+			spot = spot + right * SHIFT_M;
+		else if (variant == 5)
+			spot = spot - front * SHIFT_M;
+		yaw = YawFor(facing);
+		order.m_iCandidateIndex = FIELD_INDEX - 10 * index - variant;
+		Print(string.Format("[ZCR][FORTPLAN] event=try token=%1 field=1 side=%2 spot=%3 variant=%4 facing=%5 x=%6 z=%7", order.m_sToken,
+			order.m_sFaction, index, variant, Math.Round(facing), Math.Round(spot[0]), Math.Round(spot[2])) +
+			string.Format(" from_base_m=%1", Math.Round(vector.DistanceXZ(spot, order.m_vProviderPosition))), LogLevel.NORMAL);
+		return true;
+	}
+
+	// How far from its provider this order may build: the provider's radius, for a field candidate out to the spot.
+	static float OrderReach(AICF_ConstructionOrder order, float radius)
+	{
+		if (!order || order.m_iCandidateIndex > FIELD_INDEX)
+			return radius;
+		return Math.Max(radius, vector.DistanceXZ(order.m_aTransform[3], order.m_vProviderPosition) + 30);
+	}
+
+	// ... and a placed composition (the builders' checks): its receipt tells a field fortification.
+	static float Reach(SCR_CampaignBuildingCompositionComponent composition, IEntity provider, float radius)
+	{
+		if (!composition || !composition.GetOwner() || !provider || !composition.m_AICFConstructionReceipt ||
+			composition.m_AICFConstructionReceipt.m_iCandidateIndex > FIELD_INDEX)
+			return radius;
+		return Math.Max(radius, vector.DistanceXZ(composition.GetOwner().GetOrigin(), provider.GetOrigin()) + 1);
+	}
+
 	static string BaseName(SCR_CampaignMilitaryBaseComponent base)
 	{
 		if (!base)
@@ -329,7 +505,16 @@ class AICF_ZcrFortPlan
 		int spotIndex = -1;
 		int variant = -1;
 		int index;
-		if (order.m_iCandidateIndex <= -1000 && s_mOrderPlan.Find(order.m_sToken, index) && index >= 0)
+		if (order.m_iCandidateIndex <= FIELD_INDEX)
+		{
+			spotIndex = (FIELD_INDEX - order.m_iCandidateIndex) / 10;
+			variant = (FIELD_INDEX - order.m_iCandidateIndex) % 10;
+			array<ref AICF_ZcrFortSpot> field = s_mField.Get(order.m_sFaction);
+			if (field && spotIndex < field.Count())
+				field[spotIndex].m_bUsed = true;
+			source = "field";
+		}
+		else if (order.m_iCandidateIndex <= -1000 && s_mOrderPlan.Find(order.m_sToken, index) && index >= 0)
 		{
 			spotIndex = (-1000 - order.m_iCandidateIndex) / 10;
 			variant = (-1000 - order.m_iCandidateIndex) % 10;
