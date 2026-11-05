@@ -441,6 +441,15 @@ class AICF_ConstructionSiteSearch
 		return true;
 	}
 
+	// ZCR, 5 Nov night (note 538): a field fortification's site is not path-checked from the base - 800-1200 m out the builder's
+	// path query hit its limit (WORKER_PATH_QUERY_LIMIT, then CANDIDATE_COMPUTE_TIMEOUT) on all 41 tries round the spot and the
+	// base built at home instead (5 Nov 03:42 battle, Arleville 1112 m). The builder walks there with its move order; a spot it
+	// can't reach runs out its walk timeout (AICF_BaseBuilderService) and is deferred. -aicfZcrFieldPath: checked as before.
+	protected static bool ZcrFieldNoPath(AICF_ConstructionOrder order)
+	{
+		return order.m_iCandidateIndex <= AICF_ZcrFortPlan.FIELD_INDEX && !System.IsCLIParam("aicfZcrFieldPath");
+	}
+
 	// -1 отказ, 0 pending, 1 полноценная площадка, 2 geometry ready для очереди.
 	int Step(AICF_ConstructionOrder order, AIPathfindingComponent pathfinding, int sliceMs = -1)
 	{
@@ -461,7 +470,7 @@ class AICF_ConstructionSiteSearch
 		}
 		if (order.m_iStage == 3 && order.m_bTerrainLiveChecked)
 		{
-			if (order.Forced())
+			if (order.Forced() || ZcrFieldNoPath(order))
 				return 1;
 			if (!order.m_bPathAdmitted)
 				return 2;
@@ -551,7 +560,7 @@ class AICF_ConstructionSiteSearch
 			order.m_bTerrainLiveChecked = true;
 		}
 		// Проверенный endpoint затем без пересчёта использует worker.
-		if (order.Forced())
+		if (order.Forced() || ZcrFieldNoPath(order))
 		{
 			order.m_sReason = "SITE_VALIDATED";
 			return 1;
