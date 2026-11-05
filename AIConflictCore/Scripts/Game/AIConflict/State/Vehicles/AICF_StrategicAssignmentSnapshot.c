@@ -88,6 +88,25 @@ class AICF_StrategicAssignmentSnapshot
 			m_iBaseRevision >= 0;
 	}
 
+	// ZCR (5 Nov, Martin: "dont we have many us soldiers stuck unconscious in the cars? ... soldiers seem dead"): the same check
+	// without the group - a team killed aboard has its empty group deleted, and its trip could never be ended (see
+	// AICF_TransportTrip.IsValidForTermination).
+	bool IsValidIgnoringGroup()
+	{
+		bool positionValid = m_vTargetPosition[0] == m_vTargetPosition[0] &&
+			m_vTargetPosition[1] == m_vTargetPosition[1] &&
+			m_vTargetPosition[2] == m_vTargetPosition[2] &&
+			Math.AbsFloat(m_vTargetPosition[0]) < float.MAX &&
+			Math.AbsFloat(m_vTargetPosition[1]) < float.MAX &&
+			Math.AbsFloat(m_vTargetPosition[2]) < float.MAX;
+		bool destinationValid = m_TargetKind == AICF_EOrderTargetKind.POSITION ||
+			(m_TargetKind == AICF_EOrderTargetKind.BASE && m_TargetBase);
+		return !m_sFactionKey.IsEmpty() && m_iSlotId >= 0 && !m_sSlotKey.IsEmpty() &&
+			m_iGroupGeneration > 0 && destinationValid && positionValid &&
+			m_iAssignmentRevision >= 0 && m_iStrategicIntentRevision >= 0 &&
+			m_iBaseRevision >= 0;
+	}
+
 	bool MatchesDestination(AICF_StrategicAssignmentSnapshot other)
 	{
 		if (!other || other.GetTargetKind() != m_TargetKind ||
