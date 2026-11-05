@@ -317,7 +317,10 @@ class AICF_ZcrFortPlan
 	// field spots before anything else (each at its facing, +-TURN_DEG, SHIFT_M aside), and the base's building radius
 	// reaches as far as the spot (OrderReach, Reach - the builders walk out from the base). Logged: [ZCR][FORTPLAN]
 	// event=field_spot / event=try ... field=1 / event=placed source=field. -aicfZcrFieldForts 0 turns it off.
-	static const float FIELD_M = 600;
+	// 5 Nov night: 1200, not 600 - the side attacking the point has no base that near (the 01:00 battle: Gemini's forward spots
+	// were 810-1110 m from either side's nearest base, so no field fort was started before a capture; the one built came
+	// from Beauregard itself after the Soviets took it).
+	static const float FIELD_M = 1200;
 	static const int FIELD_INDEX = -100000;
 	// Each field spot is searched round (4 Nov night - the night's battles: every try at the spot itself and 6 m aside failed
 	// the game's checks, mostly PHYSICAL_OBSTRUCTION, also WATER, BASE_ACCESS_CORRIDOR, ROAD_OR_ACCESS_CORRIDOR): the spot,

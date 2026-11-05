@@ -458,8 +458,9 @@ class AICF_BaseBuilderService
 			// ZCR (4 Nov evening, note 538): a field fortification 180-300 m out through a fought-over town gets 5 minutes, not 2
 			// (test 6: the builder made 50 m in 120 s and went home).
 			int moveTimeout = MOVE_TIMEOUT_MS;
+			// 5 Nov night: a field spot up to 1200 m out - 2 minutes plus a minute per 70 m from the base (at least 5).
 			if (builder.m_Target.m_AICFConstructionReceipt && builder.m_Target.m_AICFConstructionReceipt.m_iCandidateIndex <= AICF_ZcrFortPlan.FIELD_INDEX)
-				moveTimeout = 300000;
+				moveTimeout = Math.Max(300000, 120000 + (int)(vector.DistanceXZ(home, builder.m_vWorkPosition) * 857));
 			if (now - builder.m_iMoveAtMs >= moveTimeout)
 			{
 				builder.m_aDeferredTargets.Insert(builder.m_Target);
