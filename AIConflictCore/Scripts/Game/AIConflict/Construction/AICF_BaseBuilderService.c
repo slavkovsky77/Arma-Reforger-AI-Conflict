@@ -210,7 +210,8 @@ class AICF_BaseBuilderService
 			!base || base.GetFaction() != faction || !provider || !provider.GetOwner() ||
 			provider.GetCampaignMilitaryBaseComponent() != base || composition.GetProviderEntity() != provider.GetOwner() ||
 			SCR_Faction.GetEntityFaction(composition.GetOwner()) != faction ||
-			vector.DistanceXZ(composition.GetOwner().GetOrigin(), provider.GetOwner().GetOrigin()) > provider.GetBuildingRadius())
+			vector.DistanceXZ(composition.GetOwner().GetOrigin(), provider.GetOwner().GetOrigin()) >
+			AICF_ZcrFortPlan.Reach(composition, provider.GetOwner(), provider.GetBuildingRadius()))
 			return false;
 		if (!m_aPlaced.Contains(composition))
 			m_aPlaced.Insert(composition);
@@ -234,7 +235,8 @@ class AICF_BaseBuilderService
 			if (provider && provider.GetOwner() && provider.GetCampaignMilitaryBaseComponent() == base &&
 				SCR_Faction.GetEntityFaction(composition.GetOwner()) == base.GetFaction() &&
 				SCR_Faction.GetEntityFaction(provider.GetOwner()) == base.GetFaction() &&
-				vector.DistanceXZ(composition.GetOwner().GetOrigin(), provider.GetOwner().GetOrigin()) <= provider.GetBuildingRadius())
+				vector.DistanceXZ(composition.GetOwner().GetOrigin(), provider.GetOwner().GetOrigin()) <=
+				AICF_ZcrFortPlan.Reach(composition, provider.GetOwner(), provider.GetBuildingRadius()))
 				return true;
 		}
 		return false;
@@ -275,7 +277,8 @@ class AICF_BaseBuilderService
 		Faction faction = SCR_Faction.GetEntityFaction(owner);
 		if (faction && faction != builder.m_Faction)
 			return false;
-		float radius = provider.GetBuildingRadius();
+		// ZCR (4 Nov, note 538): a field fortification is in reach out to where it stands (AICF_ZcrFortPlan.Reach).
+		float radius = AICF_ZcrFortPlan.Reach(composition, providerEntity, provider.GetBuildingRadius());
 		return radius > 0 && vector.DistanceSqXZ(providerEntity.GetOrigin(), owner.GetOrigin()) <= radius * radius;
 	}
 
@@ -364,7 +367,11 @@ class AICF_BaseBuilderService
 					if (other != builder && other.m_Group && other.m_Faction == faction)
 						working++;
 				}
-				if (working >= capText.ToInt())
+				// ZCR (4 Nov evening, note 538): a field fortification's builder goes past the cap - the test's field bunker at
+				// Beauregard lost its builder and waited 13 minutes for a slot the rear bases' fortifications never freed.
+				bool fieldTarget = firstTarget.m_AICFConstructionReceipt &&
+					firstTarget.m_AICFConstructionReceipt.m_iCandidateIndex <= AICF_ZcrFortPlan.FIELD_INDEX;
+				if (working >= capText.ToInt() && !fieldTarget)
 				{
 					builder.m_iRetryAtMs = now + BLOCKED_RETRY_MS;
 					return;
@@ -448,7 +455,13 @@ class AICF_BaseBuilderService
 		{
 			StopTool(builder);
 			builder.m_iWorkAtMs = 0;
-			if (now - builder.m_iMoveAtMs >= MOVE_TIMEOUT_MS)
+			// ZCR (4 Nov evening, note 538): a field fortification 180-300 m out through a fought-over town gets 5 minutes, not 2
+			// (test 6: the builder made 50 m in 120 s and went home).
+			int moveTimeout = MOVE_TIMEOUT_MS;
+			// 5 Nov night: a field spot up to 1200 m out - 2 minutes plus a minute per 70 m from the base (at least 5).
+			if (builder.m_Target.m_AICFConstructionReceipt && builder.m_Target.m_AICFConstructionReceipt.m_iCandidateIndex <= AICF_ZcrFortPlan.FIELD_INDEX)
+				moveTimeout = Math.Max(300000, 120000 + (int)(vector.DistanceXZ(home, builder.m_vWorkPosition) * 857));
+			if (now - builder.m_iMoveAtMs >= moveTimeout)
 			{
 				builder.m_aDeferredTargets.Insert(builder.m_Target);
 				builder.m_aDeferredUntilMs.Insert(now + RETRY_DELAY_MS);

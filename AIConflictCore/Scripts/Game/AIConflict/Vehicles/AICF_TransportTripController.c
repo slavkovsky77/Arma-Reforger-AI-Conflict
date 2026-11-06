@@ -118,7 +118,8 @@ class AICF_TransportTripController
 		if (!trip)
 			return AICF_TripOutcome.TerminalFailClosed(reason, "stale-trip-missing");
 		string causationId = BuildCausationId(trip, "STALE_TERMINATION");
-		if (!trip.IsValid() || !fleet || reason.IsEmpty() ||
+		// ZCR (5 Nov): IsValidForTermination - a trip whose group was deleted (its team killed aboard) is ended too.
+		if (!trip.IsValidForTermination() || !fleet || reason.IsEmpty() ||
 			fleet.GetFactionKey() != trip.GetFactionKey() ||
 			!IsStaleTerminationLeaseCurrent(trip, fleet))
 		{

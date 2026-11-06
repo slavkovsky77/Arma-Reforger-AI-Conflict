@@ -185,8 +185,14 @@ class AICF_ConstructionPlanner
 				}
 				continue;
 			}
-			if (!order.IdentityValid() || !Commander(order.m_Faction) || m_Builders.HasUnfinishedWork(order.m_Base) ||
-				order.m_Base.AreEnemiesPresent() || order.m_Base.IsBeingCaptured() || order.m_Base.GetCaptureState() != SCR_EBaseCaptureState.NONE)
+			// ZCR (4 Nov evening, note 538): a field fortification goes on while enemies are at its base - the side holding a
+			// fought-over town is the one that wants it (the test: 49 sites found 200-300 m out, then cancelled, Soviets in the town);
+			// a capture under way still stops it.
+			bool zcrFieldOn = order.m_iCandidateIndex <= AICF_ZcrFortPlan.FIELD_INDEX && !order.m_Base.IsBeingCaptured();
+			bool contested = order.m_Base.AreEnemiesPresent() || order.m_Base.IsBeingCaptured() || order.m_Base.GetCaptureState() != SCR_EBaseCaptureState.NONE;
+			if (zcrFieldOn)
+				contested = false;
+			if (!order.IdentityValid() || !Commander(order.m_Faction) || m_Builders.HasUnfinishedWork(order.m_Base) || contested)
 				Cancel(state, "LIFECYCLE_INVALIDATED");
 			else if (order.m_bPathContextSet && (!order.m_PathContext || order.m_PathContext != Commander(order.m_Faction).GetConstructionPathfinding()))
 				// Включает geometry checkpoint и ожидание commit budget: эти
@@ -361,12 +367,17 @@ class AICF_ConstructionPlanner
 		// currently no cover and every defender gets killed by drones"): the live general chose to fortify - at the point it
 		// holds (-zcrOnePoint) fortifications come first, up to ZCR_FORTIFY_MAX, decided every 20 s (the round of building
 		// types gave Farm 0-2 fortifications a battle, the rear bases 25-35).
-		bool zcrFortify = ZcrFortifyHere(order);
+		// 4 Nov (note 538): a base nearest the live general's open field spots builds them first (AICF_ZcrFortPlan.FieldBase);
+		// they stand outside the base, so its own fortifications don't count against them.
+		bool zcrField = AICF_ZcrFortPlan.FieldBase(order);
+		bool zcrFortify = zcrField || ZcrFortifyHere(order);
 		if (zcrFortify)
 		{
 			state.m_iDueAt = now + 20000;
-			coverage[AICF_EConstructionType.FORTIFICATION] = Fortifications() >= ZCR_FORTIFY_MAX ||
-				now < state.m_aSearchRetryAt[AICF_EConstructionType.FORTIFICATION];
+			bool full = Fortifications() >= ZCR_FORTIFY_MAX;
+			if (zcrField)
+				full = false;
+			coverage[AICF_EConstructionType.FORTIFICATION] = full || now < state.m_aSearchRetryAt[AICF_EConstructionType.FORTIFICATION];
 		}
 		// ZCR (21 Oct, Martin: "free guys should build much more"): one base of a side searches for its first
 		// depot at a time; the others build. In the watched matches every base searched 7-11 minutes for a
@@ -507,12 +518,31 @@ class AICF_ConstructionPlanner
 			int lifetime = 60000;
 			if (order.m_aPendingCandidates[expired].m_bPathPending)
 				lifetime = 15000;
+			// ZCR (4 Nov evening, note 538): a field site's builders' path from the base runs 200-300 m through the town and
+			// took longer than 15 s - every field site that passed the checks expired while a near one inside the base won.
+			if (order.m_aPendingCandidates[expired].m_iIndex <= AICF_ZcrFortPlan.FIELD_INDEX)
+				lifetime = 90000;
 			if (order.m_aPendingCandidates[expired].m_iQueuedAt - order.m_aPendingCandidates[expired].m_iStartedAt < lifetime)
 				continue;
 			order.Log("CONSTRUCTION_PENDING_EXPIRED", "candidate_index=" + order.m_aPendingCandidates[expired].m_iIndex + " status=COMPUTE_LIMIT");
 			order.m_aPendingCandidates.Remove(expired);
 		}
-		if (order.m_iStage == 0 && !order.m_aPendingCandidates.IsEmpty())
+		// ZCR (note 538): a pending field site is resumed first, and once every field try was made no new site inside the base
+		// is started while one is pending.
+		int fieldPending = -1;
+		foreach (int pendingIndex, AICF_ConstructionCandidate pendingCandidate : order.m_aPendingCandidates)
+		{
+			if (fieldPending < 0 && pendingCandidate.m_iIndex <= AICF_ZcrFortPlan.FIELD_INDEX)
+				fieldPending = pendingIndex;
+		}
+		if (order.m_iStage == 0 && fieldPending >= 0)
+		{
+			order.m_aPendingCandidates[fieldPending].Restore(order);
+			order.m_aPendingCandidates.Remove(fieldPending);
+			order.m_iPathResumes++;
+			order.m_iPathSliceAt = order.m_iQueries;
+		}
+		else if (order.m_iStage == 0 && !order.m_aPendingCandidates.IsEmpty())
 		{
 			// FIFO между квантами: малое расстояние до endpoint за оградой
 			// не доказывает достижимость. Иначе такие пути снова забирают квоту
@@ -531,6 +561,8 @@ class AICF_ConstructionPlanner
 		}
 		while (order.m_iStage == 0 && m_iCandidatesThisTick < m_Config.m_iCandidatesPerTick && candidates++ < m_Config.m_iCandidatesPerTick && System.GetTickCount() - sliceStarted < m_Config.m_iSliceMs)
 		{
+			if (fieldPending >= 0 && !AICF_ZcrFortPlan.FieldTriesLeft(order))
+				break;
 			if (order.m_iAttempts >= order.m_iAttemptLimit)
 			{
 				if (order.m_eType != AICF_EConstructionType.SMALL_BARRACKS && (!MainDepot(order) || order.m_iAttemptLimit >= 3 * m_Config.m_iAttempts)
@@ -864,7 +896,16 @@ class AICF_ConstructionPlanner
 	protected bool Covered(AICF_ConstructionOrder order, AICF_EConstructionType type)
 	{
 		if (type == AICF_EConstructionType.FORTIFICATION)
+		{
+			// ZCR (4 Nov night): the commit's re-check cancelled every field fortification that found its site (night battle 6:
+			// COMMIT_REVALIDATION_FAILED after 64 and 53 candidates - the base already had its 5) and held 'fortify' at the
+			// point to 5 instead of ZCR_FORTIFY_MAX. A field one stands outside the base: the base's own don't cover it.
+			if (order.m_iCandidateIndex <= AICF_ZcrFortPlan.FIELD_INDEX)
+				return false;
+			if (ZcrFortifyHere(order))
+				return Fortifications() >= ZCR_FORTIFY_MAX;
 			return Fortifications() >= FortificationsPerBase() || !AtFront(order);
+		}
 		foreach (IEntity entity : m_aInventory)
 		{
 			if (!entity)

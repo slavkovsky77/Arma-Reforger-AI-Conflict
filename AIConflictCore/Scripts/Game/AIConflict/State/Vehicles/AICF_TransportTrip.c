@@ -78,6 +78,15 @@ class AICF_TransportTrip
 			m_iAbsoluteDeadlineMs > m_iStartedAtMs;
 	}
 
+	// ZCR (5 Nov): the identity a stale trip needs to be ended - its group may be gone (a team killed aboard: 57 US trips in 28
+	// town battles stayed in TRANSIT with nobody alive, the vehicle and its bodies on the road, the slot never riding again).
+	bool IsValidForTermination()
+	{
+		return m_Assignment && m_Assignment.IsValidIgnoringGroup() && m_iTripGeneration > 0 &&
+			!m_sOperationId.IsEmpty() && !m_sCausationId.IsEmpty() &&
+			m_iAbsoluteDeadlineMs > m_iStartedAtMs;
+	}
+
 	bool MatchesIdentity(
 		FactionKey factionKey,
 		int slotId,

@@ -204,6 +204,19 @@ class AICF_ZcrAttackPlan
 		return true;
 	}
 
+	// The live general's field fortifications (4 Nov, note 538 - Martin: "llm general could actually build defense lines
+	// (bunkers and shit) where it needs ... who told that some position outside of the base could not set up?"):
+	// "fort <faction> <x> <z> <facing>" lines; AICF_ZcrFortPlan builds them. Each as Vector(x, facing, z).
+	protected static ref map<string, ref array<vector>> s_mLiveForts = new map<string, ref array<vector>>();
+
+	static array<vector> LiveForts(string faction)
+	{
+		if (!LiveOn() || faction.IsEmpty())
+			return null;
+		LoadLive();
+		return s_mLiveForts.Get(faction);
+	}
+
 	static int LiveDroneTarget(string faction)
 	{
 		int target = -1;
@@ -240,6 +253,7 @@ class AICF_ZcrAttackPlan
 		map<string, string> strategy = new map<string, string>();
 		map<string, string> armourMode = new map<string, string>();
 		map<string, vector> armourAt = new map<string, vector>();
+		map<string, ref array<vector>> forts = new map<string, ref array<vector>>();
 		AICF_ZcrPlanLane lane;
 		bool complete;
 		while (f.ReadLine(line) >= 0)
@@ -259,6 +273,18 @@ class AICF_ZcrAttackPlan
 			{
 				armourMode.Set(v[1] + "|" + v[2], v[3]);
 				armourAt.Set(v[1] + "|" + v[2], Vector(v[4].ToFloat(), 0, v[5].ToFloat()));
+				lane = null;
+				continue;
+			}
+			if (v[0] == "fort" && v.Count() >= 5)
+			{
+				array<vector> sideForts = forts.Get(v[1]);
+				if (!sideForts)
+				{
+					sideForts = {};
+					forts.Set(v[1], sideForts);
+				}
+				sideForts.Insert(Vector(v[2].ToFloat(), v[4].ToFloat(), v[3].ToFloat()));
 				lane = null;
 				continue;
 			}
@@ -313,6 +339,7 @@ class AICF_ZcrAttackPlan
 		s_mLiveStrategy = strategy;
 		s_mLiveArmourMode = armourMode;
 		s_mLiveArmourAt = armourAt;
+		s_mLiveForts = forts;
 		s_mLiveDroneTarget = droneTarget;
 		s_iLiveVersion = version;
 		Print(string.Format("[ZCR][LIVEPLAN] t=%1 event=loaded version=%2 teams=%3", Math.Round(now / 1000), version, plans.Count()), LogLevel.NORMAL);

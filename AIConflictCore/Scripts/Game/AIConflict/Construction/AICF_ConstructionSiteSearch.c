@@ -194,7 +194,8 @@ class AICF_ConstructionSiteSearch
 			searchCenter = roadSpot;
 		}
 		// ZCR (2 Nov): a fortification tries its base's planned spots and facings first (AICF_ZcrFortPlan, lab/fortplan.py;
-		// Seed sets the candidate index, -1000 - 10 x spot - variant, which the placement log reads).
+		// Seed sets the candidate index, -1000 - 10 x spot - variant, which the placement log reads); 4 Nov (note 538): the
+		// live general's field spots before them (AICF_ZcrFortPlan.FieldSeed).
 		else if (AICF_ZcrFortPlan.Seed(order, roadSpot, roadYaw))
 		{
 			order.m_fYaw = roadYaw;
@@ -412,7 +413,9 @@ class AICF_ConstructionSiteSearch
 			return false;
 		vector worldMin, worldMax;
 		terrain.GetTerrainBoundBox(worldMin, worldMax);
-		if (VolumeInsideBounds(mins, maxs, order.m_aTransform, worldMin, worldMax, order.m_Provider.GetOwner().GetOrigin(), order.m_Provider.GetBuildingRadius()))
+		// ZCR (4 Nov, note 538): a field fortification reaches out to its spot (AICF_ZcrFortPlan.OrderReach).
+		if (VolumeInsideBounds(mins, maxs, order.m_aTransform, worldMin, worldMax, order.m_Provider.GetOwner().GetOrigin(),
+			AICF_ZcrFortPlan.OrderReach(order, order.m_Provider.GetBuildingRadius())))
 			return true;
 		order.m_sReason = "OUTSIDE_BUILDING_OR_WORLD_BOUNDS";
 		return false;
@@ -438,6 +441,15 @@ class AICF_ConstructionSiteSearch
 		return true;
 	}
 
+	// ZCR, 5 Nov night (note 538): a field fortification's site is not path-checked from the base - 800-1200 m out the builder's
+	// path query hit its limit (WORKER_PATH_QUERY_LIMIT, then CANDIDATE_COMPUTE_TIMEOUT) on all 41 tries round the spot and the
+	// base built at home instead (5 Nov 03:42 battle, Arleville 1112 m). The builder walks there with its move order; a spot it
+	// can't reach runs out its walk timeout (AICF_BaseBuilderService) and is deferred. -aicfZcrFieldPath: checked as before.
+	protected static bool ZcrFieldNoPath(AICF_ConstructionOrder order)
+	{
+		return order.m_iCandidateIndex <= AICF_ZcrFortPlan.FIELD_INDEX && !System.IsCLIParam("aicfZcrFieldPath");
+	}
+
 	// -1 отказ, 0 pending, 1 полноценная площадка, 2 geometry ready для очереди.
 	int Step(AICF_ConstructionOrder order, AIPathfindingComponent pathfinding, int sliceMs = -1)
 	{
@@ -458,7 +470,7 @@ class AICF_ConstructionSiteSearch
 		}
 		if (order.m_iStage == 3 && order.m_bTerrainLiveChecked)
 		{
-			if (order.Forced())
+			if (order.Forced() || ZcrFieldNoPath(order))
 				return 1;
 			if (!order.m_bPathAdmitted)
 				return 2;
@@ -548,7 +560,7 @@ class AICF_ConstructionSiteSearch
 			order.m_bTerrainLiveChecked = true;
 		}
 		// Проверенный endpoint затем без пересчёта использует worker.
-		if (order.Forced())
+		if (order.Forced() || ZcrFieldNoPath(order))
 		{
 			order.m_sReason = "SITE_VALIDATED";
 			return 1;
@@ -812,7 +824,7 @@ class AICF_ConstructionSiteSearch
 		WorkBounds(order, mins, maxs);
 		order.m_Path.Begin(order.m_vPathStart, order.m_aWorkCandidates, mins - "0.5 0 0.5", maxs + "0.5 0 0.5");
 		order.m_Path.AddStarts(order.m_aPathStarts);
-		order.m_Path.IncludeArea(order.m_vProviderPosition, order.m_Provider.GetBuildingRadius() + 32);
+		order.m_Path.IncludeArea(order.m_vProviderPosition, AICF_ZcrFortPlan.OrderReach(order, order.m_Provider.GetBuildingRadius()) + 32);
 		order.m_Path.Seed(order.m_Navigation);
 		return order.m_Path.Step(order, pathfinding, Math.Max(0, sliceMs - (System.GetTickCount() - started)));
 	}
@@ -1247,6 +1259,10 @@ class AICF_ConstructionSiteSearch
 		check.m_Provider = receipt.m_Provider;
 		check.m_fMinHeight = receipt.m_fMinHeight;
 		check.m_fMaxHeight = receipt.m_fMaxHeight;
+		// ZCR (4 Nov night, note 538): a field fortification's completion is checked with its own reach (the copy had none -
+		// the first builder at a field MG nest was blocked: OUTSIDE_BUILDING_OR_WORLD_BOUNDS).
+		check.m_iCandidateIndex = receipt.m_iCandidateIndex;
+		check.m_vProviderPosition = receipt.m_vProviderPosition;
 		foreach (AICF_ConstructionVolume exitVolume : receipt.m_aExits)
 			check.m_aExits.Insert(exitVolume);
 		Math3D.MatrixCopy(transform, check.m_aTransform);
