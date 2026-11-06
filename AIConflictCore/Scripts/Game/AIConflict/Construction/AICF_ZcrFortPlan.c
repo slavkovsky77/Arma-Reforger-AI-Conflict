@@ -334,7 +334,7 @@ class AICF_ZcrFortPlan
 	static bool FieldOn()
 	{
 		string value;
-		if (System.GetCLIParam("aicfZcrFieldForts", value) && value == "0")
+		if (AICF_Launch.Get("aicfZcrFieldForts", value) && value == "0")
 			return false;
 		return AICF_ZcrAttackPlan.LiveOn();
 	}

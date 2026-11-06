@@ -57,6 +57,7 @@ Changes inside existing files are marked in comments ("ZCR, <date>").
 - M `AIConflictCore/Scripts/Game/AIConflict/Forces/AICF_GroupCohesionPolicy.c`
 - M `AIConflictCore/Scripts/Game/AIConflict/Forces/AICF_GroupSpawner.c`
 - M `AIConflictCore/Scripts/Game/AIConflict/Forces/AICF_InfantryRecruitmentService.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Forces/AICF_SocialActor.c`
 - A `AIConflictCore/Scripts/Game/AIConflict/Forces/AICF_ZcrUnstick.c`
 - A `AIConflictCore/Scripts/Game/AIConflict/Integration/AICF_BaseRegen.c`
 - A `AIConflictCore/Scripts/Game/AIConflict/Integration/AICF_BaseStorage.c`
@@ -73,6 +74,8 @@ Changes inside existing files are marked in comments ("ZCR, <date>").
 - M `AIConflictCore/Scripts/Game/AIConflict/State/AICF_GroupSlot.c`
 - M `AIConflictCore/Scripts/Game/AIConflict/State/AICF_RouteRecoveryEpisode.c`
 - M `AIConflictCore/Scripts/Game/AIConflict/State/Vehicles/AICF_FactionFleet.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/State/Vehicles/AICF_StrategicAssignmentSnapshot.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/State/Vehicles/AICF_TransportTrip.c`
 - M `AIConflictCore/Scripts/Game/AIConflict/State/Vehicles/AICF_TransportTripRegistry.c`
 - M `AIConflictCore/Scripts/Game/AIConflict/State/Vehicles/AICF_VehicleBoardingTokens.c`
 - M `AIConflictCore/Scripts/Game/AIConflict/State/Vehicles/AICF_VehiclePhaseStates.c`
@@ -81,6 +84,7 @@ Changes inside existing files are marked in comments ("ZCR, <date>").
 - M `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_LogisticsRouteRecovery.c`
 - A `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_RoadGraph.c`
 - A `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_RoadMines.c`
+- M `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_TransportTripController.c`
 - M `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_VehicleAcquisitionFlow.c`
 - M `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_VehicleBoardingFlow.c`
 - M `AIConflictCore/Scripts/Game/AIConflict/Vehicles/AICF_VehicleCatalog.c`

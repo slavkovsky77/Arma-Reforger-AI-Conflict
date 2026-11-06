@@ -447,7 +447,7 @@ class AICF_ConstructionSiteSearch
 	// can't reach runs out its walk timeout (AICF_BaseBuilderService) and is deferred. -aicfZcrFieldPath: checked as before.
 	protected static bool ZcrFieldNoPath(AICF_ConstructionOrder order)
 	{
-		return order.m_iCandidateIndex <= AICF_ZcrFortPlan.FIELD_INDEX && !System.IsCLIParam("aicfZcrFieldPath");
+		return order.m_iCandidateIndex <= AICF_ZcrFortPlan.FIELD_INDEX && !AICF_Launch.Has("aicfZcrFieldPath");
 	}
 
 	// -1 отказ, 0 pending, 1 полноценная площадка, 2 geometry ready для очереди.
